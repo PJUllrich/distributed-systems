@@ -2,6 +2,9 @@ class Device:
     """Base class for Nodes"""
 
     def __init__(self):
+        self.connect()
+
+    def connect(self):
         pass
 
     def broadcast(self):
