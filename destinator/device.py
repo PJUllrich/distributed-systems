@@ -17,8 +17,8 @@ class Device:
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((self.category.MCAST_ADDR, self.category.MCAST_PORT))
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        self.socket.bind(('0.0.0.0', self.category.MCAST_PORT))
 
         membership = struct.pack("4sl",
                                  socket.inet_aton(self.category.MCAST_ADDR),
@@ -36,7 +36,7 @@ class Device:
 
     def receive(self):
         while True:
-            message, address = self.socket.recv(255)
+            message = self.socket.recv(255)
             print(message)
 
     def deliver(self, msg):
