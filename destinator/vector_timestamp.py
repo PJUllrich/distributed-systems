@@ -1,5 +1,7 @@
 import threading
+import logging
 
+logger = logging.getLogger(__name__)
 
 class VectorTimestamp(threading.Thread):
     def __init__(self, device):
@@ -18,6 +20,7 @@ class VectorTimestamp(threading.Thread):
     def receive(self):
         while not self.cancelled:
             message = self.device.sock.recv(255)
+            logger.info("Received message")
             t = threading.Thread(target=self.handle_message, args=(message,))
             t.start()
 
