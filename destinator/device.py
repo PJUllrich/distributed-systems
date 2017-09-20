@@ -1,19 +1,24 @@
 import logging
-from threading import Thread
+import threading
 
 from destinator.socket_factory import SocketFactory
 
 logger = logging.getLogger(__name__)
 
 
-class Device:
+class Device(threading.Thread):
     """Base class for Nodes"""
 
     sock = None
 
     def __init__(self, category):
+        super().__init__()
+        self.deamon = True
+        self.cancelled = False
+
         self.category = category
 
+    def run(self):
         self.connect()
 
     def connect(self):
@@ -23,10 +28,10 @@ class Device:
         self.listen()
 
     def listen(self):
-        t = Thread(target=self.receive)
+        t = threading.Thread(target=self.receive)
         t.start()
 
-        logger.info("Device is connected")
+        logger.info(f"Thread {threading.get_ident()} is connected to Multicast Socket")
 
     def broadcast(self, msg):
         self.sock.sendto(msg.encode(), (self.category.MCAST_ADDR,
@@ -35,7 +40,7 @@ class Device:
     def receive(self):
         while True:
             message = self.sock.recv(255)
-            t = Thread(target=self.handle_message, args=(message,))
+            t = threading.Thread(target=self.handle_message, args=(message,))
             t.start()
 
     def handle_message(self, msg):
