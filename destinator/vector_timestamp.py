@@ -2,23 +2,32 @@ import threading
 from asyncio import Queue
 
 from destinator.receiver import Receiver
+from destinator.socket_factory import SocketFactory
 
 # Time after which requests time out (in milliseconds)
 REQUEST_TIMEOUT = 1000
 
 
 class VectorTimestamp(threading.Thread):
+    sock = None
+
     def __init__(self, device):
         super().__init__()
         self.deamon = True
         self.cancelled = False
 
         self.device = device
-        self.receiver = Receiver(self.device.sock, self.queue_receive)
-
         self.queue_receive = Queue()
         self.queue_deliver = Queue()
         self.queue_execute = Queue()
+
+        self.connect()
+
+        self.receiver = Receiver(self.sock, self.queue_receive)
+
+    def connect(self):
+        self.sock = SocketFactory.create_socket(self.device.category.MCAST_ADDR,
+                                                self.device.category.MCAST_PORT)
 
     def run(self):
         self.receiver.start()
