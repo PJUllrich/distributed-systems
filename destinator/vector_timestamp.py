@@ -69,17 +69,6 @@ class VectorTimestamp(threading.Thread):
         self.deliver(msg)
         logger.info(f"{threading.get_ident()}: Message received! {msg}")
 
-    def deliver(self, msg):
-        """
-        Puts a message into the Queue shared with the Device Thread.
-
-        Parameters
-        ----------
-        msg:    str
-            The message in JSON format that should be delivered to the Device Thread
-        """
-        self.queue_deliver.put(msg)
-
     def send(self, msg):
         """
         Sends a message via the Multicast socket.
@@ -92,3 +81,14 @@ class VectorTimestamp(threading.Thread):
         """
         self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
                                                self.device.category.MCAST_PORT))
+
+    def deliver(self, msg):
+        """
+        Puts a message into the Queue shared with the Device Thread.
+
+        Parameters
+        ----------
+        msg:    str
+            The message in JSON format that should be delivered to the Device Thread
+        """
+        self.queue_deliver.put(msg)
