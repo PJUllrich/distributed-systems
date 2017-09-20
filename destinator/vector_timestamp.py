@@ -1,3 +1,4 @@
+import logging
 import threading
 from asyncio import Queue
 
@@ -6,6 +7,8 @@ from destinator.socket_factory import SocketFactory
 
 # Time after which requests time out (in milliseconds)
 REQUEST_TIMEOUT = 1000
+
+logger = logging.getLogger(__name__)
 
 
 class VectorTimestamp(threading.Thread):
@@ -63,10 +66,19 @@ class VectorTimestamp(threading.Thread):
                 self.queue_receive.task_done()
 
     def handle_message(self, msg):
-        pass
+        self.deliver(msg)
+        logger.info(f"{threading.get_ident()}: Message received! {msg}")
 
     def deliver(self, msg):
-        pass
+        """
+        Puts a message into the Queue shared with the Device Thread.
+
+        Parameters
+        ----------
+        msg:    str
+            The message in JSON format that should be delivered to the Device Thread
+        """
+        self.queue_deliver.put(msg)
 
     def broadcast(self, msg):
         """

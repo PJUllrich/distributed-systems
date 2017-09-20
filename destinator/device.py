@@ -39,4 +39,4 @@ class Device(threading.Thread):
                 self.order.queue_deliver.task_done()
 
     def handle_message(self, msg):
-        pass
+        logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
