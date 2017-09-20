@@ -22,7 +22,7 @@ class VectorTimestamp(threading.Thread):
         self.device = device
         self.queue_receive = Queue()
         self.queue_deliver = Queue()
-        self.queue_execute = Queue()
+        self.queue_send = Queue()
 
         self.connect()
 
@@ -55,17 +55,17 @@ class VectorTimestamp(threading.Thread):
         Forwards the message to the handle_message function.
         """
         while not self.cancelled:
-            if not self.queue_execute.empty():
-                cmd, args = self.queue_execute.get()
-                cmd(*args)
-                self.queue_execute.task_done()
+            if not self.queue_send.empty():
+                msg = self.queue_send.get()
+                self.send(msg)
+                self.queue_send.task_done()
 
             if not self.queue_receive.empty():
                 msg = self.queue_receive.get()
-                self.handle_message(msg)
+                self.receive(msg)
                 self.queue_receive.task_done()
 
-    def handle_message(self, msg):
+    def receive(self, msg):
         self.deliver(msg)
         logger.info(f"{threading.get_ident()}: Message received! {msg}")
 
@@ -80,14 +80,14 @@ class VectorTimestamp(threading.Thread):
         """
         self.queue_deliver.put(msg)
 
-    def broadcast(self, msg):
+    def send(self, msg):
         """
-        Broadcasts a message via the Multicast socket.
+        Sends a message via the Multicast socket.
 
         Parameters
         ----------
         msg:    str
-            The message to be send
+            The message to be sent
 
         """
         self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
