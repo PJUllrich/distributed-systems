@@ -1,5 +1,10 @@
 import threading
 
+# Time after which requests time out (in milliseconds)
+REQUEST_TIMEOUT = 1000
+
+MESSAGE_SIZE = 255
+
 
 class VectorTimestamp(threading.Thread):
     def __init__(self, device):
@@ -17,7 +22,7 @@ class VectorTimestamp(threading.Thread):
 
     def receive(self):
         while not self.cancelled:
-            message = self.device.sock.recv(255)
+            message = self.device.sock.recv(MESSAGE_SIZE)
             t = threading.Thread(target=self.handle_message, args=(message,))
             t.start()
 
@@ -26,3 +31,7 @@ class VectorTimestamp(threading.Thread):
 
     def deliver(self, msg):
         pass
+
+    def broadcast(self, msg):
+        self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
+                                               self.device.category.MCAST_PORT))
