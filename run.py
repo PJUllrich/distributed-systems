@@ -9,5 +9,3 @@ if __name__ == '__main__':
 
     devices = [Device(group.Temperature) for _ in range(9)]
     [device.start() for device in devices]
-
-    devices[0].broadcast('Hello World')

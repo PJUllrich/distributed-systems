@@ -1,4 +1,6 @@
 import logging
+import threading
+import uuid
 
 import sys
 
@@ -16,8 +18,11 @@ def setup_logger(filename):
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.INFO)
 
+    mac_addr = hex(uuid.getnode()).replace('0x', '')
+    thread_id = str(threading.get_ident())
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        '%(asctime)s - %(levelname)s - '+mac_addr+'-'+thread_id+' - %(name)s: %('
+                                                             'message)s')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
 
