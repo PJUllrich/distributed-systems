@@ -2,12 +2,13 @@ import logging
 import threading
 
 from destinator.socket_factory import SocketFactory
+from destinator.vector_timestamp import VectorTimestamp
 
 logger = logging.getLogger(__name__)
 
 
 class Device(threading.Thread):
-    """Base class for Nodes"""
+    """Base class for Nodes/Processes"""
 
     sock = None
 
@@ -17,34 +18,20 @@ class Device(threading.Thread):
         self.cancelled = False
 
         self.category = category
+        self.order = VectorTimestamp(self)
 
     def run(self):
         self.connect()
+        self.listen()
 
     def connect(self):
         self.sock = SocketFactory.create_socket(self.category.MCAST_ADDR,
                                                 self.category.MCAST_PORT)
-
-        self.listen()
+        logger.info(f"Thread {threading.get_ident()} is connected to Multicast Socket")
 
     def listen(self):
-        t = threading.Thread(target=self.receive)
-        t.start()
-
-        logger.info(f"Thread {threading.get_ident()} is connected to Multicast Socket")
+        self.order.start()
 
     def broadcast(self, msg):
         self.sock.sendto(msg.encode(), (self.category.MCAST_ADDR,
                                         self.category.MCAST_PORT))
-
-    def receive(self):
-        while True:
-            message = self.sock.recv(255)
-            t = threading.Thread(target=self.handle_message, args=(message,))
-            t.start()
-
-    def handle_message(self, msg):
-        print(msg)
-
-    def deliver(self, msg):
-        pass
