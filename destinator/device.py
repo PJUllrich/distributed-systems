@@ -1,6 +1,9 @@
+import logging
 from threading import Thread
 
 from destinator.socket_factory import SocketFactory
+
+logger = logging.getLogger(__name__)
 
 
 class Device:
@@ -22,6 +25,8 @@ class Device:
     def listen(self):
         t = Thread(target=self.receive)
         t.start()
+
+        logger.info("Device is connected")
 
     def broadcast(self, msg):
         self.sock.sendto(msg.encode(), (self.category.MCAST_ADDR,
