@@ -26,14 +26,31 @@ class VectorTimestamp(threading.Thread):
         self.receiver = Receiver(self.sock, self.queue_receive)
 
     def connect(self):
+        """
+        Connects to a Multicast socket on the address and port specified in the Category
+        of the Device
+        """
         self.sock = SocketFactory.create_socket(self.device.category.MCAST_ADDR,
                                                 self.device.category.MCAST_PORT)
 
     def run(self):
+        """
+        Runs the VectorTimestamp Thread.
+        This also starts the Receiver Thread, which listens to incoming messages.
+        Starts pulling messages or commands from the Queues shared with the Receiver
+        Thread and the Device Thread.
+        """
         self.receiver.start()
         self.pull()
 
     def pull(self):
+        """
+        Pulls any command from the Queue shared with the Device Thread.
+        Executes the command, if there is any.
+
+        Pulls messages from the Queue shared with the Receiver Thread.
+        Forwards the message to the handle_message function.
+        """
         while not self.cancelled:
             if not self.queue_execute.empty():
                 cmd, args = self.queue_execute.get()
@@ -52,5 +69,14 @@ class VectorTimestamp(threading.Thread):
         pass
 
     def broadcast(self, msg):
+        """
+        Broadcasts a message via the Multicast socket.
+
+        Parameters
+        ----------
+        msg:    str
+            The message to be send
+
+        """
         self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
                                                self.device.category.MCAST_PORT))

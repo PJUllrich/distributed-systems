@@ -18,10 +18,20 @@ class Device(threading.Thread):
         self.order = VectorTimestamp(self)
 
     def run(self):
+        """
+        Runs the Device Thread.
+        This also starts the Thread of the VectorTimestamp associated with the Device
+        object. The Device Thread also starts pulling messages from the Queue shared
+        with the VectorTimestamp Thread
+        """
         self.order.start()
         self.pull()
 
     def pull(self):
+        """
+        Pulls messages from the Queue shared with the VectorTimestamp Thread.
+        Forwards a message to the handle_message function if there is any message.
+        """
         while not self.cancelled:
             if not self.order.queue_deliver.empty():
                 msg = self.order.queue_deliver.get()
