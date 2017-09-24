@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 class Communicator(threading.Thread):
     def __init__(self, device):
         super().__init__()
-        self.daemon = True
         self.cancelled = False
 
         self.device = device
