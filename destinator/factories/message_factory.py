@@ -8,6 +8,31 @@ class MessageFactory:
     FIELD_TEXT = "MSG"
 
     @classmethod
+    def pack(cls, vector, text):
+        """
+        Packs a Vector object and a text into a JSON string.
+
+        Parameters
+        ----------
+        vector: Vector
+            A Vector object containing identifying information about a VectorTimestamp
+            object.
+
+        text:   str
+            A String that will be packed together with the Vector data
+
+        Returns
+        -------
+        str
+            JSON data of the input
+        """
+        data = {
+            cls.FIELD_VECTOR: vector.__dict__,
+            cls.FIELD_TEXT: text
+        }
+        return json.dumps(data)
+
+    @classmethod
     def unpack(cls, msg):
         """
         Creates a dict from the JSON inpud.
@@ -36,28 +61,3 @@ class MessageFactory:
         text = data.get(cls.FIELD_TEXT)
 
         return vector, text
-
-    @classmethod
-    def pack(cls, vector, text):
-        """
-        Packs a Vector object and a text into a JSON string.
-
-        Parameters
-        ----------
-        vector: Vector
-            A Vector object containing identifying information about a VectorTimestamp
-            object.
-
-        text:   str
-            A String that will be packed together with the Vector data
-
-        Returns
-        -------
-        str
-            JSON data of the input
-        """
-        data = {
-            cls.FIELD_VECTOR: vector.__dict__,
-            cls.FIELD_TEXT: text
-        }
-        return json.dumps(data)

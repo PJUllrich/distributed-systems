@@ -2,9 +2,9 @@ import logging
 import threading
 from queue import Queue
 
-from destinator.socket_factory import SocketFactory
+from destinator.factories.socket_factory import SocketFactory
+from destinator.message_handler import MessageHandler
 from destinator.util.listener import Listener
-from destinator.vector_timestamp import VectorTimestamp
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Connector(threading.Thread):
 
         self.connect()
 
-        self.ordering = VectorTimestamp(self)
+        self.message_handler = MessageHandler(self)
         self.listener = Listener(self.sock, self.queue_receive)
 
     @property
@@ -52,7 +52,7 @@ class Connector(threading.Thread):
         Thread and the Device Thread.
         """
         self.listener.start()
-        self.ordering.initialize()
+        self.message_handler.discover()
         self.pull()
 
     def pull(self):
@@ -75,7 +75,7 @@ class Connector(threading.Thread):
                 self.queue_receive.task_done()
 
     def receive(self, msg):
-        self.ordering.b_deliver(msg)
+        self.message_handler.handle(msg)
 
     def send(self, msg):
         """
