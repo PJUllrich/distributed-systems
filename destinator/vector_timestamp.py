@@ -39,7 +39,7 @@ class VectorTimestamp:
         if not self.discovery.discovering:
             self.vector.index[self.vector.process_id] += 1
 
-        msg = self.pack(text)
+        msg = MessageFactory.pack(self.vector, text)
         self.connector.send(msg)
 
     @deco.verify_message
@@ -72,26 +72,6 @@ class VectorTimestamp:
         }
 
         return Vector(id_group_own, id_process_own, index)
-
-    def pack(self, text):
-        """
-        Packs the text into a message, which contains the vector of the VectorTimestamp
-        object and therefore identifying information about the process packing the
-        message.
-
-        Parameters
-        ----------
-        text:   str
-            The text that should be sent in a message
-
-        Returns
-        -------
-        str
-            JSON string containing the vector of the VectorTimestamp object packing the
-            message and the text
-
-        """
-        return MessageFactory.pack(self.vector, text)
 
     def handle_message(self, msg):
         """
