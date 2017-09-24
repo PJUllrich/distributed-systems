@@ -1,14 +1,10 @@
 import logging
 import threading
-from asyncio import Queue
+from queue import Queue
 
-from destinator.listener import Listener
 from destinator.socket_factory import SocketFactory
-
-# Time after which requests time out (in milliseconds)
+from destinator.util.listener import Listener
 from destinator.vector_timestamp import VectorTimestamp
-
-REQUEST_TIMEOUT = 1000
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +52,7 @@ class Connector(threading.Thread):
         Thread and the Device Thread.
         """
         self.listener.start()
+        self.ordering.initialize()
         self.pull()
 
     def pull(self):
@@ -80,9 +77,6 @@ class Connector(threading.Thread):
     def receive(self, msg):
         self.ordering.b_deliver(msg)
 
-        self.deliver(msg)
-        logger.info(f"{threading.get_ident()}: Message received! {msg}")
-
     def send(self, msg):
         """
         Sends a message via the Multicast socket.
@@ -93,8 +87,8 @@ class Connector(threading.Thread):
             The message to be sent
 
         """
-        self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
-                                               self.device.category.MCAST_PORT))
+        self.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
+                                        self.device.category.MCAST_PORT))
 
     def deliver(self, msg):
         """
