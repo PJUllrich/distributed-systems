@@ -1,94 +1,108 @@
 import logging
-import threading
-from asyncio import Queue
+from queue import Queue
 
-from destinator.receiver import Receiver
-from destinator.socket_factory import SocketFactory
-
-# Time after which requests time out (in milliseconds)
-REQUEST_TIMEOUT = 1000
+import destinator.const.messages as messages
+import destinator.util.decorators as deco
+from destinator.discovery import Discovery
+from destinator.message_factory import MessageFactory
+from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
 
 
-class VectorTimestamp(threading.Thread):
-    sock = None
+class VectorTimestamp:
+    def __init__(self, connector):
+        self.connector = connector
+        self.discovery = Discovery(self)
 
-    def __init__(self, device):
-        super().__init__()
-        self.deamon = True
-        self.cancelled = False
+        self.queue_hold_back = Queue()
+        self.vector = None
 
-        self.device = device
-        self.queue_receive = Queue()
-        self.queue_deliver = Queue()
-        self.queue_send = Queue()
+    def initialize(self):
+        self.vector = self.create_vector()
+        self.discovery.start_discovery()
 
-        self.connect()
-
-        self.receiver = Receiver(self.sock, self.queue_receive)
-
-    def connect(self):
+    def co_multicast(self, text):
         """
-        Connects to a Multicast socket on the address and port specified in the Category
-        of the Device
-        """
-        self.sock = SocketFactory.create_socket(self.device.category.MCAST_ADDR,
-                                                self.device.category.MCAST_PORT)
+        Sends out a text together with the Vector object of the VectorTimestamp object.
+        Before sending, the message counter for the Process sending is incremented by 1
+        unless the Process is discovering.
 
-    def run(self):
-        """
-        Runs the VectorTimestamp Thread.
-        This also starts the Receiver Thread, which listens to incoming messages.
-        Starts pulling messages or commands from the Queues shared with the Receiver
-        Thread and the Device Thread.
-        """
-        self.receiver.start()
-        self.pull()
+        Messages are sent through the Connector class. Look at Connector.send() for
+        more specifications of where the message is sent.
 
-    def pull(self):
+        Parameters
+        ----------
+        text:   str
+            The text to be sent
         """
-        Pulls any command from the Queue shared with the Device Thread.
-        Executes the command, if there is any.
+        if not self.discovery.discovering:
+            self.vector.index[self.vector.process_id] += 1
 
-        Pulls messages from the Queue shared with the Receiver Thread.
-        Forwards the message to the handle_message function.
+        msg = self.pack(text)
+        self.connector.send(msg)
+
+    @deco.verify_message
+    def b_deliver(self, msg):
+        logger.debug(f"Thread {self.connector.id_process}: "
+                     f"VectorTimestamp received message: {msg}")
+        if self.discovery.discovering:
+            self.discovery.handle_discovery(msg)
+
+        self.handle_message(msg)
+
+    def create_vector(self):
         """
-        while not self.cancelled:
-            if not self.queue_send.empty():
-                msg = self.queue_send.get()
-                self.send(msg)
-                self.queue_send.task_done()
+        Creates a new Vector object with the group id and process id of the Connector
+        object. Sets the counter for own messages to 0.
 
-            if not self.queue_receive.empty():
-                msg = self.queue_receive.get()
-                self.receive(msg)
-                self.queue_receive.task_done()
+        Returns
+        -------
+        Vector
+            A new Vector object holding information about Group ID, Process ID,
+            and own message count
 
-    def receive(self, msg):
-        self.deliver(msg)
-        logger.info(f"{threading.get_ident()}: Message received! {msg}")
-
-    def send(self, msg):
         """
-        Sends a message via the Multicast socket.
+        id_group_own = self.connector.id_group
+        id_process_own = self.connector.id_process
+        id_message_own = 0
+
+        index = {
+            id_process_own: id_message_own
+        }
+
+        return Vector(id_group_own, id_process_own, index)
+
+    def pack(self, text):
+        """
+        Packs the text into a message, which contains the vector of the VectorTimestamp
+        object and therefore identifying information about the process packing the
+        message.
+
+        Parameters
+        ----------
+        text:   str
+            The text that should be sent in a message
+
+        Returns
+        -------
+        str
+            JSON string containing the vector of the VectorTimestamp object packing the
+            message and the text
+
+        """
+        return MessageFactory.pack(self.vector, text)
+
+    def handle_message(self, msg):
+        """
+        Handles an incoming message.
 
         Parameters
         ----------
         msg:    str
-            The message to be sent
-
+            Received JSON data
         """
-        self.device.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
-                                               self.device.category.MCAST_PORT))
+        vector, text = MessageFactory.unpack(msg)
 
-    def deliver(self, msg):
-        """
-        Puts a message into the Queue shared with the Device Thread.
-
-        Parameters
-        ----------
-        msg:    str
-            The message in JSON format that should be delivered to the Device Thread
-        """
-        self.queue_deliver.put(msg)
+        if text == messages.DISCOVERY:
+            self.discovery.respond_discovery()
