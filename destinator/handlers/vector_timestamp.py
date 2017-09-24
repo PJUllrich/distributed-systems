@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class VectorTimestamp(BaseHandler):
-    def __init__(self, send, deliver, vector, next):
-        super().__init__(vector, send, deliver, next)
+    def __init__(self, parent_handler):
+        super().__init__(parent_handler)
 
         self.queue_hold_back = Queue()
 
@@ -43,10 +43,8 @@ class VectorTimestamp(BaseHandler):
         text:   str
             The text to be sent
         """
-        self.vector.index[self.vector.process_id] += 1
 
-        msg = MessageFactory.pack(self.vector, text)
-        self.send(msg)
+        self.send(text)
 
     @deco.verify_message
     def b_deliver(self, msg):

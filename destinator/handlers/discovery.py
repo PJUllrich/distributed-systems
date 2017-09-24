@@ -5,17 +5,16 @@ import time
 import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
-from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
 
 # Time (in seconds) a process will wait until stopping to discover new Processes
-DISCOVERY_TIMEOUT = 10
+DISCOVERY_TIMEOUT = 5
 
 
 class Discovery(BaseHandler):
-    def __init__(self, vector, send, deliver, next):
-        super().__init__(vector, send, deliver, next)
+    def __init__(self, parent_handler):
+        super().__init__(parent_handler)
 
         self.discovery_start = None
 
@@ -28,9 +27,7 @@ class Discovery(BaseHandler):
         multicast group.
         """
 
-        msg_discovery = MessageFactory.pack(self.vector, messages.DISCOVERY)
-        self.send(msg_discovery)
-        print(msg_discovery)
+        self.parent.send(messages.DISCOVERY, increment=False)
         self.discovery_start = time.time()
 
     def handle(self, msg):
@@ -48,29 +45,36 @@ class Discovery(BaseHandler):
 
         vector, text = MessageFactory.unpack(msg)
 
-        if vector.process_id not in self.vector.index:
-            self.vector.index[vector.process_id] = vector.index.get(vector.process_id)
+        if vector.process_id not in self.parent.vector.index:
+            self.parent.vector.index[vector.process_id] = \
+                vector.index.get(vector.process_id)
             logger.info(f"Thread {threading.get_ident()}: "
                         f"VectorTimestamp added Process: {vector.process_id}."
-                        f"New index: {self.vector.index}")
+                        f"New index: {self.parent.vector.index}")
 
-        self.check_discovering_timeout()
+        if self.timeout():
+            self.parent.end_discover()
+            self.parent.handle(msg)
 
     def respond_discovery(self):
         """
         Sends a response to a DISCOVERY message containing identifying information
         about the VectorTimestamp object.
         """
-        self.send(messages.DISCOVERY_RESPONSE)
+        self.parent.send(messages.DISCOVERY_RESPONSE)
 
-    def check_discovering_timeout(self):
+    def timeout(self):
         """
         Checks whether DISCOVERY_TIMEOUT is reached.
-        Stops the Discovery mode if True.
+
+        Returns
+        -------
+        bool
+            Whether Discovery timed out or not
         """
         if time.time() - self.discovery_start >= DISCOVERY_TIMEOUT:
             logger.debug(f"Thread {threading.get_ident()}: "
-                         f"VectorTimestamp stopped Discovery Mode")
-            self.next()
+                         f"Discovery Mode timed out.")
+            return True
 
-
+        return False

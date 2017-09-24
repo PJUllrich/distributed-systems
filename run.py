@@ -1,3 +1,6 @@
+import random
+import time
+
 import destinator.const.groups as group
 from destinator.device import Device
 from destinator.util.logger import setup_logger
@@ -9,3 +12,6 @@ if __name__ == '__main__':
 
     devices = [Device(group.Temperature) for _ in range(3)]
     [device.start() for device in devices]
+
+    time.sleep(6)
+    devices[0].send(f'Hello World - {random.randint(1, 100)}')

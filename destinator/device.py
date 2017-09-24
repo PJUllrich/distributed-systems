@@ -1,7 +1,7 @@
 import logging
 import threading
 
-from destinator.connector import Connector
+from destinator.communicator import Communicator
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Device(threading.Thread):
         self.cancelled = False
 
         self.category = category
-        self.connector = Connector(self)
+        self.connector = Communicator(self)
 
     def run(self):
         """
@@ -40,3 +40,6 @@ class Device(threading.Thread):
 
     def handle_message(self, msg):
         logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
+
+    def send(self, msg):
+        self.connector.send(msg)

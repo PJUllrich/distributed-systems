@@ -1,6 +1,8 @@
 import logging
+import threading
 
 import destinator.util.decorators as deco
+from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
 from destinator.util.vector import Vector
@@ -9,33 +11,41 @@ logger = logging.getLogger(__name__)
 
 
 class MessageHandler:
-    def __init__(self, connector):
-        self.connector = connector
+    def __init__(self, category, communicator):
+        self.communicator = communicator
+        self.category = category
 
-        self.handler = iter([Discovery, VectorTimestamp])
+        self.handler = [Discovery, VectorTimestamp]
         self.active_handler = None
+
         self.vector = None
 
-    def discover(self):
+    def start_discover(self):
         self.vector = self.create_vector()
-        self.next(self.vector)
 
+        self.set_handler(0)
         self.active_handler.start_discovery()
 
     @deco.verify_message
     def handle(self, msg):
         self.active_handler.handle(msg)
 
-    def send(self, msg):
-        self.connector.send(msg)
+    def send(self, text, increment=True):
+        if increment:
+            self.vector.index[self.vector.process_id] += 1
+
+        msg = MessageFactory.pack(self.vector, text)
+        self.communicator.broadcast(msg)
 
     def deliver(self, msg):
-        self.connector.deliver(msg)
+        self.communicator.deliver(msg)
 
-    def next(self, vector):
-        handler_new = self.handler.__next__()
+    def end_discover(self):
+        self.set_handler(1)
 
-        self.active_handler = handler_new(vector, self.send, self.deliver, self.next)
+    def set_handler(self, idx):
+        handler_new = self.handler[idx]
+        self.active_handler = handler_new(self)
 
     def create_vector(self):
         """
@@ -49,8 +59,8 @@ class MessageHandler:
             and own message count
 
         """
-        id_group_own = self.connector.id_group
-        id_process_own = self.connector.id_process
+        id_group_own = self.category.MCAST_ADDR
+        id_process_own = threading.get_ident()
         id_message_own = 0
 
         index = {
