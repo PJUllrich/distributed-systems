@@ -2,17 +2,13 @@ import logging
 import threading
 from queue import Queue
 
-from destinator.factories.message_factory import MessageFactory
-from destinator.factories.socket_factory import SocketFactory
-from destinator.message_handler import Communicator
-from destinator.util.listener import Listener
+from destinator.connector import Connector
+from destinator.message_handler import MessageHandler
 
 logger = logging.getLogger(__name__)
 
 
-class Connector(threading.Thread):
-    sock = None
-
+class Communicator(threading.Thread):
     def __init__(self, device):
         super().__init__()
         self.deamon = True
@@ -23,26 +19,8 @@ class Connector(threading.Thread):
         self.queue_deliver = Queue()
         self.queue_send = Queue()
 
-        self.connect()
-
-        self.message_handler = Communicator(self)
-        self.listener = Listener(self.sock, self.queue_receive)
-
-    @property
-    def id_group(self):
-        return self.device.category.MCAST_ADDR
-
-    @property
-    def id_process(self):
-        return threading.get_ident()
-
-    def connect(self):
-        """
-        Connects to a Multicast socket on the address and port specified in the Category
-        of the Device
-        """
-        self.sock = SocketFactory.create_socket(self.device.category.MCAST_ADDR,
-                                                self.device.category.MCAST_PORT)
+        self.message_handler = MessageHandler(self.device.category, self)
+        self.connector = Connector(self.device.category, self.queue_receive)
 
     def run(self):
         """
@@ -52,7 +30,8 @@ class Connector(threading.Thread):
         Starts pulling messages or commands from the Queues shared with the Receiver
         Thread and the Device Thread.
         """
-        self.listener.start()
+        self.connector.start()
+        self.message_handler.start_discover()
         self.pull()
 
     def pull(self):
@@ -66,7 +45,7 @@ class Connector(threading.Thread):
         while not self.cancelled:
             if not self.queue_send.empty():
                 msg = self.queue_send.get()
-                self.send(msg)
+                self.connector.broadcast(msg)
                 self.queue_send.task_done()
 
             if not self.queue_receive.empty():
@@ -75,26 +54,39 @@ class Connector(threading.Thread):
                 self.queue_receive.task_done()
 
     def receive(self, msg):
-        self.message_handler.handle(msg)
-
-    def send(self, text, increment=True):
         """
-        Sends a message via the Multicast socket.
+        Forwards a received message to the MessageHandler
 
         Parameters
         ----------
-        text:    str
-            The text to be sent
-        increment:  bool
-            Whether to increment the message counter in the Vector or not
+        msg:    str
+            The incoming message in JSON format
         """
-        if increment:
-            self.vector.index[self.vector.process_id] += 1
+        self.message_handler.handle(msg)
 
-        msg = MessageFactory.pack(self.vector, text)
+    def send(self, text):
+        """
+        Forwards a text that should be sent to the MessageHandler, which then handles
+        the actual sending.
 
-        self.sock.sendto(msg.encode(), (self.device.category.MCAST_ADDR,
-                                        self.device.category.MCAST_PORT))
+        Parameters
+        ----------
+        msg:    str
+            The message as a string (only text w/o Vector data).
+        """
+        self.message_handler.send(text)
+
+    def broadcast(self, msg):
+        """
+        Puts a message in the Send Queue from where it will be sent to the Connector
+        for broadcasting.
+
+        Parameters
+        ----------
+        msg:    str
+            JSON data with Vector data + Text
+        """
+        self.queue_send.put(msg)
 
     def deliver(self, msg):
         """
