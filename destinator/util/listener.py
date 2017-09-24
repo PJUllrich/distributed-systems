@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 class Listener(threading.Thread):
     def __init__(self, sock, queue):
         super().__init__()
-        self.deamon = True
+        self.daemon = True
         self.cancelled = False
 
         self.sock = sock

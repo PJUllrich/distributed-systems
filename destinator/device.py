@@ -11,7 +11,7 @@ class Device(threading.Thread):
 
     def __init__(self, category):
         super().__init__()
-        self.deamon = True
+        self.daemon = True
         self.cancelled = False
 
         self.category = category
