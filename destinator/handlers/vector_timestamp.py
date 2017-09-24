@@ -44,7 +44,7 @@ class VectorTimestamp(BaseHandler):
             The text to be sent
         """
 
-        self.send(text)
+        self.parent.send(text)
 
     @deco.verify_message
     def b_deliver(self, msg):
@@ -60,4 +60,4 @@ class VectorTimestamp(BaseHandler):
             A String containing the message (Identifier + text) in JSON format
 
         """
-        self.deliver(msg)
+        self.parent.deliver(msg)
