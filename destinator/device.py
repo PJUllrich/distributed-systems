@@ -1,7 +1,7 @@
 import logging
 import threading
 
-from destinator.vector_timestamp import VectorTimestamp
+from destinator.communicator import Communicator
 
 logger = logging.getLogger(__name__)
 
@@ -11,11 +11,10 @@ class Device(threading.Thread):
 
     def __init__(self, category):
         super().__init__()
-        self.deamon = True
         self.cancelled = False
 
         self.category = category
-        self.order = VectorTimestamp(self)
+        self.connector = Communicator(self)
 
     def run(self):
         """
@@ -24,7 +23,7 @@ class Device(threading.Thread):
         object. The Device Thread also starts pulling messages from the Queue shared
         with the VectorTimestamp Thread
         """
-        self.order.start()
+        self.connector.start()
         self.pull()
 
     def pull(self):
@@ -33,10 +32,13 @@ class Device(threading.Thread):
         Forwards a message to the handle_message function if there is any message.
         """
         while not self.cancelled:
-            if not self.order.queue_deliver.empty():
-                msg = self.order.queue_deliver.get()
+            if not self.connector.queue_deliver.empty():
+                msg = self.connector.queue_deliver.get()
                 self.handle_message(msg)
-                self.order.queue_deliver.task_done()
+                self.connector.queue_deliver.task_done()
 
     def handle_message(self, msg):
         logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
+
+    def send(self, msg):
+        self.connector.send(msg)
