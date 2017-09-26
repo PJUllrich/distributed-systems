@@ -1,5 +1,6 @@
 import logging
 import threading
+from queue import Queue
 
 import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
@@ -10,32 +11,52 @@ from destinator.util.vector import Vector
 logger = logging.getLogger(__name__)
 
 
-class MessageHandler:
-    def __init__(self, category, communicator):
+class MessageHandler(threading.Thread):
+    def __init__(self, communicator, connector):
+        super().__init__()
+        self.cancelled = False
+
         self.communicator = communicator
-        self.category = category
+        self.connector = connector
+
+        self.queue_send = Queue()
 
         self.active_handler = None
-
         self.vector = None
 
-    def start_discover(self):
+    def run(self):
         """
-        Creates a new Vector. Sets the new active handler to Discovery and starts the
-        discovery process.
+        Creates a new Vector.
+        Sets the new active handler to Discovery and starts the discovery process.
+        Starts pulling messages from the Connector.
+        Starts transmitting messages to the Connector for broadcasting.
         """
         self.vector = self.create_vector()
 
         self.active_handler = Discovery(self)
         self.active_handler.start_discovery()
 
-    def end_discover(self):
+        while not self.cancelled:
+            self._pull()
+            self._transmit()
+
+    def _pull(self):
         """
-        Ends the discovery procedure by setting the active handler to VectorTimestamp.
-        Thus, from here on, incoming messages will be handled by the VectorTimestamp
-        algorithm.
+        Pulls a message from the Connector receiving Queue if a message is
+        available and handles the message.
         """
-        self.active_handler = VectorTimestamp(self)
+        if not self.connector.queue_receive.empty():
+            msg = self.connector.queue_receive.get()
+            self.handle(msg)
+
+    def _transmit(self):
+        """
+        Pulls a message from the sending Queue of the MessageHandler class if available
+        and puts the message in the sending Queue of Connector for broadcasting.
+        """
+        if not self.queue_send.empty():
+            msg = self.queue_send.get()
+            self.connector.queue_send.put(msg)
 
     @deco.verify_message
     def handle(self, msg):
@@ -50,7 +71,7 @@ class MessageHandler:
 
     def send(self, text, increment=True):
         """
-        Forwards a message to the Communicator class. Increments the message counter by 1
+        Puts a message into the sending Queue. Increments the message counter by 1
         if not otherwise specified (counter should not be incremented during discovery).
 
         Parameters
@@ -64,7 +85,7 @@ class MessageHandler:
             self.vector.index[self.vector.process_id] += 1
 
         msg = MessageFactory.pack(self.vector, text)
-        self.communicator.broadcast(msg)
+        self.queue_send.put(msg)
 
     def deliver(self, msg):
         """
@@ -76,6 +97,14 @@ class MessageHandler:
             The message to be delivered in JSON format
         """
         self.communicator.deliver(msg)
+
+    def end_discover(self):
+        """
+        Ends the discovery procedure by setting the active handler to VectorTimestamp.
+        Thus, from here on, incoming messages will be handled by the VectorTimestamp
+        algorithm.
+        """
+        self.active_handler = VectorTimestamp(self)
 
     def create_vector(self):
         """
@@ -89,7 +118,7 @@ class MessageHandler:
             and own message count
 
         """
-        id_group_own = self.category.MCAST_ADDR
+        id_group_own = self.communicator.category.MCAST_ADDR
         id_process_own = threading.get_ident()
         id_message_own = 0
 

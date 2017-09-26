@@ -16,6 +16,9 @@ class Listener(threading.Thread):
         self.queue = queue
 
     def run(self):
+        """
+        Starts the receiving loop, which receives packages from the socket.
+        """
         self.receive()
 
     def receive(self):
