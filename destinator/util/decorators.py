@@ -1,6 +1,7 @@
 import logging
 from functools import wraps
 
+import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,10 @@ def verify_message(func):
         if vector.group_id != obj.vector.group_id:
             logger.warning(
                 f"Received message from different group {vector.group_id}, text: {text}")
+            return
+
+        # Ignore DISCOVERY messages if not the leader
+        if text == messages.DISCOVERY and not obj.leader:
             return
 
         return func(obj, msg)

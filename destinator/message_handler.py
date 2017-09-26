@@ -21,6 +21,7 @@ class MessageHandler(threading.Thread):
 
         self.queue_send = Queue()
 
+        self.leader = False
         self.active_handler = None
         self.vector = None
 
