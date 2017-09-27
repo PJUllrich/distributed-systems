@@ -1,5 +1,6 @@
 import logging
 import threading
+import random as rd
 
 from destinator.communicator import Communicator
 
@@ -27,6 +28,10 @@ class Device(threading.Thread):
 
         while not self.cancelled:
             self.pull()
+            if rd.random() < 0.000001:
+                self.send(rd.randint(-10, 30))
+
+        logger.warning(f"{threading.get_ident()} - Device crashed)")
 
     def pull(self):
         """
