@@ -13,18 +13,6 @@ class VectorTimestamp(BaseHandler):
 
         self.queue_hold_back = Queue()
 
-    def handle(self, msg):
-        """
-        Handles an incoming message.
-
-        Parameters
-        ----------
-        msg:    str
-            Received JSON data
-        """
-
-        super().handle(msg)
-
     def default(self, vector, text):
         logger.info(f'VectorTimestamp called Default function for message: {text}')
 
@@ -49,7 +37,12 @@ class VectorTimestamp(BaseHandler):
         self.parent.send(text)
 
     def b_deliver(self, msg):
-        pass
+        self.queue_hold_back.put(msg)
+
+        
+
+
+
 
     def co_deliver(self, msg):
         """

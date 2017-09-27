@@ -18,11 +18,10 @@ class BaseHandler(ABC):
 
     def handle(self, msg):
         """
-        Checks whether the DISCOVERY_TIMEOUT is reached. If yes, changes the active
-        handler in MessageHandler and passes the message back to MessageHandler.
-
-        If not timed out, unpacks the vector and text from a message and passes these
-        parameters on to the preset handler for the message text.
+        Default function for handling messages. Looks up a function in the handlers
+        dict and executes the function if an applicable one is found. Otherwise calls
+        the default function, which can be overwritten by sub-classes to add their own
+        functionality.
 
         Parameters
         ----------
@@ -85,6 +84,5 @@ class BaseHandler(ABC):
         text:   str
             The message text received with the message
         """
-        # TODO: Figure out what the default function in Discovery mode should do.
         logger.debug(f"Handler received a message for which no handle function could be "
                      f"found: {text}")
