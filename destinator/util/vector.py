@@ -4,6 +4,9 @@ class Vector:
         self.process_id = process_id
         self.index = index
 
+    def __eq__(self, other):
+        return other.process_id == self.process_id
+
     @staticmethod
     def from_json(data):
         """
