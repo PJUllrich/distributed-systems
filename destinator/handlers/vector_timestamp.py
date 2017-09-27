@@ -1,7 +1,6 @@
 import logging
 from queue import Queue
 
-import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
 
@@ -24,10 +23,13 @@ class VectorTimestamp(BaseHandler):
             Received JSON data
         """
 
-        vector, text = MessageFactory.unpack(msg)
-        logger.info(f"VectorTimestamp received message: {text} from {vector}")
+        super().handle(msg)
 
-        # TODO: ADD THE ACTUAL ALGORITHM
+    def default(self, vector, text):
+        logger.info(f'VectorTimestamp called Default function for message: {text}')
+
+        msg = MessageFactory.pack(vector, text)
+        self.b_deliver(msg)
 
     def co_multicast(self, text):
         """
@@ -46,7 +48,6 @@ class VectorTimestamp(BaseHandler):
 
         self.parent.send(text)
 
-    @deco.verify_message
     def b_deliver(self, msg):
         pass
 
