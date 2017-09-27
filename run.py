@@ -26,7 +26,7 @@ if __name__ == '__main__':
     while True:
         prob = random.random()
 
-        if prob < (PROB_CRASH ):
+        if prob < PROB_CRASH:
             devices[random.randint(0, ACTIVE_THREADS - 1)].cancelled = True
         elif prob > 1 - (PROB_CREATE / 1000):
             devices.append(Device(group.Temperature).start())
