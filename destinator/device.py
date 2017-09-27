@@ -14,7 +14,7 @@ class Device(threading.Thread):
         self.cancelled = False
 
         self.category = category
-        self.connector = Communicator(self)
+        self.communicator = Communicator(self)
 
     def run(self):
         """
@@ -23,22 +23,23 @@ class Device(threading.Thread):
         object. The Device Thread also starts pulling messages from the Queue shared
         with the VectorTimestamp Thread
         """
-        self.connector.start()
-        self.pull()
+        self.communicator.start()
+
+        while not self.cancelled:
+            self.pull()
 
     def pull(self):
         """
         Pulls messages from the Queue shared with the VectorTimestamp Thread.
         Forwards a message to the handle_message function if there is any message.
         """
-        while not self.cancelled:
-            if not self.connector.queue_deliver.empty():
-                msg = self.connector.queue_deliver.get()
-                self.handle_message(msg)
-                self.connector.queue_deliver.task_done()
+        if not self.communicator.queue_deliver.empty():
+            msg = self.communicator.queue_deliver.get()
+            self.handle_message(msg)
+            self.communicator.queue_deliver.task_done()
 
     def handle_message(self, msg):
         logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
 
     def send(self, msg):
-        self.connector.send(msg)
+        self.communicator.send(msg)
