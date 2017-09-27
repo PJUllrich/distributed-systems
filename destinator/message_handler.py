@@ -99,7 +99,7 @@ class MessageHandler(threading.Thread):
         """
         self.communicator.deliver(msg)
 
-    def end_discover(self):
+    def end_discovery(self):
         """
         Ends the discovery procedure by setting the active handler to VectorTimestamp.
         Thus, from here on, incoming messages will be handled by the VectorTimestamp
