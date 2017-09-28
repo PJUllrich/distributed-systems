@@ -1,14 +1,17 @@
 import random
 import time
+import logging
 
 import destinator.const.groups as group
 from destinator.device import Device
 from destinator.util.logger import setup_logger
 
+logger = logging.getLogger(__name__)
+
 # input area
 COUNT_DEVICES = 10
 ACTIVE_THREADS = 3
-PROB_CREATE = 0.00001
+PROB_CREATE = 0.4
 PROB_CRASH = 0.2
 SLEEP_TIME = 1
 
@@ -24,11 +27,13 @@ if __name__ == '__main__':
     time.sleep(6)
 
     while True:
-        prob = random.random()
-
-        if prob < PROB_CRASH:
-            devices[random.randint(0, ACTIVE_THREADS - 1)].cancelled = True
-        elif prob > 1 - (PROB_CREATE / 1000):
+        if len(devices) is not 0 and random.random() < PROB_CRASH:
+            logger.info("Letting one device crash...")
+            device_index = random.randint(0, len(devices) - 1)
+            devices[device_index].cancelled = True
+            devices.pop(device_index)
+        if random.random() < PROB_CREATE:
+            logger.info("Starting up new device")
             devices.append(Device(group.Temperature).start())
 
         time.sleep(SLEEP_TIME)
