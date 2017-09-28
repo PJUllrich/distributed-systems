@@ -31,17 +31,19 @@ class Communicator:
         self.connector.start()
         self.message_handler.start()
 
-    def send(self, text):
+    def send(self, payload, message_type):
         """
         Forwards a text that should be sent to the MessageHandler, which then handles
         the actual sending.
 
         Parameters
         ----------
-        text:    str
+        payload:  str
             The message as a string (only text w/o Vector data).
+        message_type: str
+            The group of the message
         """
-        self.message_handler.send(text)
+        self.message_handler.send(payload, message_type)
 
     def deliver(self, msg):
         """
