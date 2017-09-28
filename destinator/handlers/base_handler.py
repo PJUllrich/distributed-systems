@@ -58,16 +58,16 @@ class BaseHandler(ABC):
             used_ports = self.parent.vector.index.keys()
             assigned_port = list(used_ports)[-1] + 1
             vector.process_id = assigned_port
-            logger.info(f"Got discover message from {payload}")
-            logger.info(f"My port {my_port}")
-            logger.info(f"Found devices: {used_ports}")
-            logger.info(f"Assigning port {assigned_port} to new device")
+            logger.debug(f"Got discover message from {payload}")
+            logger.debug(f"My port {my_port}")
+            logger.debug(f"Found devices: {used_ports}")
+            logger.debug(f"Assigning port {assigned_port} to new device")
             logger.debug(f"My vector is {self.parent.vector.index.get(my_port)}")
             self.parent.vector.index[assigned_port] = \
                 self.parent.vector.index.get(my_port)
 
             logger.info(f"Thread {threading.get_ident()}: "
-                        f"Leader added Process: {vector.process_id}."
+                        f"Leader added Process: {vector.process_id}. "
                         f"New index: {self.parent.vector.index}")
 
             data = {

@@ -69,8 +69,7 @@ class Discovery(BaseHandler):
 
                 self.end_discovery()
             else:
-                # DISCOVERY RESPONSE message cannot be send to individual devices
-                logger.warning(f"Received another discovery response message. "
-                               f"My identifier {self.identifer} vs {identifier}")
+                logger.info(f"Received discovery response message, but not intent "
+                               f"for me. My identifier {self.identifer} vs {identifier}")
         else:
-            logger.debug("Received message, but still discovering")
+            logger.debug("Received message, but still in discovery mode")

@@ -113,7 +113,7 @@ class MessageHandler(threading.Thread):
         Thus, from here on, incoming messages will be handled by the VectorTimestamp
         algorithm.
         """
-        logger.debug(f"Thread {threading.get_ident()}: Discovery Mode ended.")
+        logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
 
     def create_vector(self):
