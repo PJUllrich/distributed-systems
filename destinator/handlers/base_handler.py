@@ -33,6 +33,12 @@ class BaseHandler(ABC):
             Received JSON data
         """
         vector, payload, message_type = MessageFactory.unpack(msg)
+
+        if self.parent.leader:
+            if -1 in vector.index:
+                logger.warning(f"Received invalid vector {vector.index}")
+                logger.warning(f"My vector is {self.parent.vector.index}")
+
         handle_function = self.handlers.get(message_type, self.handle_unknown)
         handle_function(vector, payload, message_type)
 

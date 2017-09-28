@@ -29,8 +29,10 @@ class Device(threading.Thread):
 
         while not self.cancelled:
             self.pull()
-            if rd.random() < 0.000001:
-                self.send(rd.randint(-10, 30))
+
+            if self.communicator.message_handler.is_discovering is False:
+                if rd.random() < 0.000001:
+                    self.send(rd.randint(-10, 30))
 
         logger.warning(f"{threading.get_ident()} - Device crashed)")
 

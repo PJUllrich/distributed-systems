@@ -16,6 +16,7 @@ class MessageHandler(threading.Thread):
     def __init__(self, communicator, connector):
         super().__init__()
         self.cancelled = False
+        self.is_discovering = None
 
         self.communicator = communicator
         self.connector = connector
@@ -35,6 +36,7 @@ class MessageHandler(threading.Thread):
         """
         self.vector = self.create_vector()
 
+        self.is_discovering = True
         self.active_handler = Discovery(self)
         self.active_handler.start_discovery()
 
@@ -115,6 +117,7 @@ class MessageHandler(threading.Thread):
         """
         logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
+        self.is_discovering = False
 
     def create_vector(self):
         """
