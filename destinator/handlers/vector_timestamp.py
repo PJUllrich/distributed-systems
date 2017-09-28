@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class VectorTimestamp(BaseHandler):
-    def __init__(self, parent_handler):
-        super().__init__(parent_handler)
+    def __init__(self, message_handler):
+        super().__init__(message_handler)
 
         self.hold_back = []
 

@@ -1,6 +1,7 @@
 import logging
 import threading
 from abc import ABC
+import logging
 
 import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
@@ -12,8 +13,8 @@ class BaseHandler(ABC):
     def __init__(self, message_handler):
         self.parent = message_handler
         self.handlers = {
-            messages.DISCOVERY: self.discovery,
-            messages.DISCOVERY_RESPONSE: self.discovery_response
+            messages.DISCOVERY: self.handle_discovery_msg,
+            messages.DISCOVERY_RESPONSE: self.handle_discovery_msg_response
         }
 
     def handle(self, msg):
@@ -28,11 +29,11 @@ class BaseHandler(ABC):
         msg:    str
             Received JSON data
         """
-        vector, text = MessageFactory.unpack(msg)
-        handle_function = self.handlers.get(text, self.default)
-        handle_function(vector, text)
+        vector, payload, message_type = MessageFactory.unpack(msg)
+        handle_function = self.handlers.get(message_type, self.handle_unknown)
+        handle_function(vector, payload, message_type)
 
-    def discovery(self, vector, text):
+    def handle_discovery_msg(self, vector, payload, message_type):
         """
         Adds a Process ID to the Vector index if the index does not yet contain the
         Process ID.
@@ -40,17 +41,28 @@ class BaseHandler(ABC):
         Sends a response to a DISCOVERY message containing identifying information
         about the VectorTimestamp object.
         """
-        if vector.process_id not in self.parent.vector.index:
-            self.parent.vector.index[vector.process_id] = \
-                vector.index.get(vector.process_id)
+        if self.parent.leader:
+            my_port = self.parent.connector.port
+            used_ports = self.parent.vector.index.keys()
+            assigned_port = list(used_ports)[-1] + 1
+            vector.process_id = assigned_port
+            logger.info(f"My port {my_port}")
+            logger.info(f"Found devices: {used_ports}")
+            logger.info(f"Assigning port {assigned_port} to new device")
+            logger.debug(f"My vector is {self.parent.vector.index.get(my_port)}")
+            self.parent.vector.index[assigned_port] = \
+                self.parent.vector.index.get(my_port)
 
             logger.info(f"Thread {threading.get_ident()}: "
                         f"Leader added Process: {vector.process_id}."
                         f"New index: {self.parent.vector.index}")
 
-        self.parent.send(messages.DISCOVERY_RESPONSE, increment=False)
+            self.parent.send(assigned_port, messages.DISCOVERY_RESPONSE, increment=False)
+        else:
+            logger.debug("Received DISCOVERY message, but ignoring it [i am not a "
+                         "leader]")
 
-    def discovery_response(self, vector, text):
+    def handle_discovery_msg_response(self, vector, payload, message_type):
         """
         Handles a DISCOVERY_RESPONSE message. Adds any Process IDs to the own Vector
         index and updates the message counts of the existing Process IDs.
@@ -62,17 +74,23 @@ class BaseHandler(ABC):
         text:   str
             The message text, should be 'DISCOVERY_RESPONSE'
         """
-        if not text == messages.DISCOVERY_RESPONSE:
+        if not message_type == messages.DISCOVERY_RESPONSE:
             logger.warning(f'discovery_response function was called for the wrong '
-                           f'message text {text}')
+                           f'message text {message_type}')
             return
 
+        self.parent.vector.process_id = payload
         self.parent.vector.index.update(vector.index)
+        if -1 in self.parent.vector.index:
+            self.parent.vector.index.pop(-1)
+
+        self.parent.connector.start_individual_listener(payload)
+
         logger.info(f"Thread {threading.get_ident()}: "
                     f"Process received DISCOVERY_RESPONSE and added Process: "
                     f"{vector.process_id}. New index: {self.parent.vector.index}")
 
-    def default(self, vector, text):
+    def handle_unknown(self, vector, payload, message_type):
         """
         The default function to handle incoming messages. At the moment, only logs the
         reception of the message.
@@ -84,5 +102,5 @@ class BaseHandler(ABC):
         text:   str
             The message text received with the message
         """
-        logger.debug(f"Handler received a message for which no handle function could be "
-                     f"found: {text}")
+        logger.warning(f"Received a message {message_type} with payload {payload} "
+                    f"for which no handler exists")

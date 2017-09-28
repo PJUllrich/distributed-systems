@@ -48,3 +48,7 @@ class Device(threading.Thread):
 
     def send(self, msg):
         self.communicator.send(msg)
+
+    def set_leader(self, is_leader):
+        self.communicator.message_handler.leader = is_leader
+        self.communicator.connector.port = self.category.STARTING_PORT

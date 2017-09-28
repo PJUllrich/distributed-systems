@@ -19,7 +19,6 @@ class Discovery(BaseHandler):
         """
         Creates a new Vector information containing information about the
         VectorTimestamp object.
-
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
@@ -27,14 +26,13 @@ class Discovery(BaseHandler):
             self.end_discovery()
             return
 
-        self.parent.send(messages.DISCOVERY, increment=False)
+        self.parent.send("hello", messages.DISCOVERY, increment=False)
 
     def handle(self, msg):
         """
         Overwrites the handle function from the BaseHandler parent class. Calls the
         super handle function with the message. Checks afterwards whether the received
         message was a DISCOVERY_RESPONSE message. Ends discovery, if yes.
-
         Parameters
         ----------
         msg:    str
@@ -42,8 +40,8 @@ class Discovery(BaseHandler):
         """
         super().handle(msg)
 
-        _, text = MessageFactory.unpack(msg)
-        if text == messages.DISCOVERY_RESPONSE:
+        _, payload, message_type = MessageFactory.unpack(msg)
+        if message_type == messages.DISCOVERY_RESPONSE:
             self.end_discovery()
 
     def end_discovery(self):

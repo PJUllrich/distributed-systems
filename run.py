@@ -16,7 +16,7 @@ if __name__ == '__main__':
     setup_logger('output.log')
 
     leader = Device(group.Temperature)
-    leader.communicator.message_handler.leader = True
+    leader.set_leader(True)
 
     devices = [leader] + [Device(group.Temperature) for _ in range(ACTIVE_THREADS - 1)]
     [device.start() for device in devices]

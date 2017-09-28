@@ -7,6 +7,7 @@ from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
 from destinator.util.vector import Vector
+import destinator.const.messages as messages
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,8 @@ class MessageHandler(threading.Thread):
         """
         self.active_handler.handle(msg)
 
-    def send(self, text, increment=True):
+    def send(self, payload, message_type=messages.UNDEFINED, process=None,
+             increment=True):
         """
         Puts a message into the sending Queue. Increments the message counter by 1
         if not otherwise specified (counter should not be incremented during discovery).
@@ -82,11 +84,13 @@ class MessageHandler(threading.Thread):
         increment: bool
             Whether to increment the message counter of the Process or not.
         """
+        if process is None:
+            process = self.communicator.category.MCAST_PORT
         if increment:
             self.vector.index[self.vector.process_id] += 1
 
-        msg = MessageFactory.pack(self.vector, text)
-        self.queue_send.put(msg)
+        msg = MessageFactory.pack(self.vector, payload, message_type)
+        self.queue_send.put((process, msg))
 
     def deliver(self, msg):
         """
@@ -120,11 +124,11 @@ class MessageHandler(threading.Thread):
 
         """
         id_group_own = self.communicator.category.MCAST_ADDR
-        id_process_own = threading.get_ident()
+        id_process_id_own = self.communicator.connector.port
         id_message_own = 0
 
         index = {
-            id_process_own: id_message_own
+            id_process_id_own: id_message_own
         }
 
-        return Vector(id_group_own, id_process_own, index)
+        return Vector(id_group_own, id_process_id_own, index)

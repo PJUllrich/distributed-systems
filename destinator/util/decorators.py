@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def verify_message(func):
     @wraps(func)
     def wrapper(obj, msg):
-        vector, text = MessageFactory.unpack(msg)
+        vector, text, message_type = MessageFactory.unpack(msg)
 
         # Ignore own messages
         if (vector.group_id == obj.vector.group_id
