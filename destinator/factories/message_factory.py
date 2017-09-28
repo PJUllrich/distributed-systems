@@ -18,9 +18,10 @@ class MessageFactory:
         vector: Vector
             A Vector object containing identifying information about a VectorTimestamp
             object.
-
-        text:   str
+        payload: str
             A String that will be packed together with the Vector data
+        message_type: str
+            The group of message
 
         Returns
         -------

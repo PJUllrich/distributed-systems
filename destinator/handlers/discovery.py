@@ -1,9 +1,10 @@
 import logging
-import threading
+import json
 
 import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
+import destinator.util.util as util
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ DISCOVERY_TIMEOUT = 5
 class Discovery(BaseHandler):
     def __init__(self, parent_handler):
         super().__init__(parent_handler)
+        self.identifer = util.identifier()
 
     def start_discovery(self):
         """
@@ -26,7 +28,16 @@ class Discovery(BaseHandler):
             self.end_discovery()
             return
 
-        self.parent.send("hello", messages.DISCOVERY, increment=False)
+        msg = self.identifer
+        self.parent.send(msg, messages.DISCOVERY, increment=False)
+
+    def end_discovery(self):
+        """
+        Ends the discovery and calls the end_discovery function of the Root handler,
+        which switches the active handler from the Discovery to the VectorTimestamp
+        handler.
+        """
+        self.parent.end_discovery()
 
     def handle(self, msg):
         """
@@ -40,15 +51,26 @@ class Discovery(BaseHandler):
         """
         super().handle(msg)
 
-        _, payload, message_type = MessageFactory.unpack(msg)
+        vector, payload, message_type = MessageFactory.unpack(msg)
         if message_type == messages.DISCOVERY_RESPONSE:
-            self.end_discovery()
+            data = json.loads(payload)
+            identifier = data.get(self.FIELD_IDENTIFIER)
+            process_id = data.get(self.FIELD_PROCESS)
 
-    def end_discovery(self):
-        """
-        Ends the discovery and calls the end_discovery function of the Root handler,
-        which switches the active handler from the Discovery to the VectorTimestamp
-        handler.
-        """
-        logger.debug(f"Thread {threading.get_ident()}: Discovery Mode ended.")
-        self.parent.end_discovery()
+            if identifier == self.identifer:
+                logger.info(f"Received relevant discovery response message. I am "
+                            f"process {process_id}")
+                self.parent.vector.process_id = process_id
+                # Initial port is -1, so remove it from vector
+                if -1 in self.parent.vector.index:
+                    self.parent.vector.index.pop(-1)
+
+                self.parent.connector.start_individual_listener(process_id)
+
+                self.end_discovery()
+            else:
+                # DISCOVERY RESPONSE message cannot be send to individual devices
+                logger.warning(f"Received another discovery response message. "
+                               f"My identifier {self.identifer} vs {identifier}")
+        else:
+            logger.debug("Received message, but still discovering")

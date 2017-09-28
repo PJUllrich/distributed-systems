@@ -1,4 +1,4 @@
-import logging
+import json
 import threading
 from abc import ABC
 import logging
@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaseHandler(ABC):
+    FIELD_IDENTIFIER = "IDENTIFY"
+    FIELD_PROCESS = "PROCESS"
+
     def __init__(self, message_handler):
         self.parent = message_handler
         self.handlers = {
@@ -40,12 +43,22 @@ class BaseHandler(ABC):
 
         Sends a response to a DISCOVERY message containing identifying information
         about the VectorTimestamp object.
+
+        Parameters
+        ----------
+        vector: Vector
+            The Vector object received with the message
+        payload: str
+            The message text, should be 'DISCOVERY_RESPONSE'
+        message_type: str
+            The group of the message
         """
         if self.parent.leader:
             my_port = self.parent.connector.port
             used_ports = self.parent.vector.index.keys()
             assigned_port = list(used_ports)[-1] + 1
             vector.process_id = assigned_port
+            logger.info(f"Got discover message from {payload}")
             logger.info(f"My port {my_port}")
             logger.info(f"Found devices: {used_ports}")
             logger.info(f"Assigning port {assigned_port} to new device")
@@ -57,7 +70,13 @@ class BaseHandler(ABC):
                         f"Leader added Process: {vector.process_id}."
                         f"New index: {self.parent.vector.index}")
 
-            self.parent.send(assigned_port, messages.DISCOVERY_RESPONSE, increment=False)
+            data = {
+                self.FIELD_IDENTIFIER: payload,
+                self.FIELD_PROCESS: assigned_port
+            }
+            msg = json.dumps(data)
+
+            self.parent.send(msg, messages.DISCOVERY_RESPONSE, increment=False)
         else:
             logger.debug("Received DISCOVERY message, but ignoring it [i am not a "
                          "leader]")
@@ -71,20 +90,17 @@ class BaseHandler(ABC):
         ----------
         vector: Vector
             The Vector object received with the message
-        text:   str
+        payload: str
             The message text, should be 'DISCOVERY_RESPONSE'
+        message_type: str
+            The group of the message
         """
         if not message_type == messages.DISCOVERY_RESPONSE:
             logger.warning(f'discovery_response function was called for the wrong '
                            f'message text {message_type}')
             return
 
-        self.parent.vector.process_id = payload
         self.parent.vector.index.update(vector.index)
-        if -1 in self.parent.vector.index:
-            self.parent.vector.index.pop(-1)
-
-        self.parent.connector.start_individual_listener(payload)
 
         logger.info(f"Thread {threading.get_ident()}: "
                     f"Process received DISCOVERY_RESPONSE and added Process: "
@@ -99,8 +115,11 @@ class BaseHandler(ABC):
         ----------
         vector: Vector
             The Vector object received with the message
-        text:   str
+        payload: str
             The message text received with the message
+        message_type: str
+            The group of the message
         """
         logger.warning(f"Received a message {message_type} with payload {payload} "
                     f"for which no handler exists")
+        self.parent.vector.index.update(vector.index)

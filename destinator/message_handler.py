@@ -79,8 +79,12 @@ class MessageHandler(threading.Thread):
 
         Parameters
         ----------
-        text:   str
+        payload: str
             The text to send in a message
+        message_type: str
+            The group of the message
+        process: int
+            The process to send the payload to (None = all processes)
         increment: bool
             Whether to increment the message counter of the Process or not.
         """
@@ -109,6 +113,7 @@ class MessageHandler(threading.Thread):
         Thus, from here on, incoming messages will be handled by the VectorTimestamp
         algorithm.
         """
+        logger.debug(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
 
     def create_vector(self):
