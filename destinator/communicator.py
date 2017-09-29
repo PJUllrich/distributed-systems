@@ -22,6 +22,14 @@ class Communicator:
     def category(self):
         return self.device.category
 
+    def set_leader(self, is_leader):
+        self.message_handler.leader = is_leader
+        self.connector.port = self.category.STARTING_PORT
+
+    @property
+    def is_discovering(self):
+        return self.message_handler.is_discovering
+
     def start(self):
         """
         Starts the Connector thread, which starts listening for packages on a socket.

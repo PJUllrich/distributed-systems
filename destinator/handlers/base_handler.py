@@ -64,33 +64,34 @@ class BaseHandler(ABC):
                            f'message text {message_type}')
             return
 
-        if self.parent.leader:
-            my_port = self.parent.connector.port
-            used_ports = self.parent.vector.index.keys()
-            assigned_port = list(used_ports)[-1] + 1
-            vector.process_id = assigned_port
-            logger.debug(f"Got discover message from {payload}")
-            logger.debug(f"My port {my_port}")
-            logger.debug(f"Found devices: {used_ports}")
-            logger.debug(f"Assigning port {assigned_port} to new device")
-            logger.debug(f"My vector is {self.parent.vector.index.get(my_port)}")
-            self.parent.vector.index[assigned_port] = \
-                self.parent.vector.index.get(my_port)
-
-            logger.info(f"Thread {threading.get_ident()}: "
-                        f"Leader added Process: {vector.process_id}. "
-                        f"New index: {self.parent.vector.index}")
-
-            data = {
-                self.FIELD_IDENTIFIER: payload,
-                self.FIELD_PROCESS: assigned_port
-            }
-            msg = json.dumps(data)
-
-            self.parent.send(messages.DISCOVERY_RESPONSE, msg, increment=False)
-        else:
+        if not self.parent.leader:
             logger.debug("Received DISCOVERY message, but ignoring it [i am not a "
                          "leader]")
+            return
+
+        my_port = self.parent.connector.port
+        used_ports = self.parent.vector.index.keys()
+        assigned_port = list(used_ports)[-1] + 1
+        vector.process_id = assigned_port
+        logger.debug(f"Got discover message from {payload}. "
+                     f"My port {my_port}. "
+                     f"Found devices: {used_ports}. "
+                     f"Assigning port {assigned_port} to new device. "
+                     f"My vector is {self.parent.vector.index.get(my_port)}")
+        self.parent.vector.index[assigned_port] = \
+            self.parent.vector.index.get(my_port)
+
+        logger.info(f"Thread {threading.get_ident()}: "
+                    f"Leader added Process: {vector.process_id}. "
+                    f"New index: {self.parent.vector.index}")
+
+        data = {
+            self.FIELD_PROCESS: assigned_port,
+            self.FIELD_IDENTIFIER: payload
+        }
+        msg = json.dumps(data)
+
+        self.parent.send(messages.DISCOVERY_RESPONSE, msg, increment=False)
 
     def handle_discovery_msg_response(self, vector, message_type, payload):
         """

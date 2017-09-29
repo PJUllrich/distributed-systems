@@ -1,6 +1,6 @@
+import logging
 import random
 import time
-import logging
 
 import destinator.const.groups as group
 from destinator.device import Device
@@ -15,6 +15,19 @@ PROB_CREATE = 0.4
 PROB_CRASH = 0.2
 SLEEP_TIME = 1
 
+
+def span_device():
+    logger.info("Letting one device crash...")
+    device_index = random.randint(0, len(devices) - 1)
+    devices[device_index].cancelled = True
+    devices.pop(device_index)
+
+
+def kill_device():
+    logger.info("Starting up new device")
+    devices.append(Device(group.Temperature).start())
+
+
 if __name__ == '__main__':
     setup_logger('output.log')
 
@@ -28,12 +41,8 @@ if __name__ == '__main__':
 
     while True:
         if len(devices) is not 0 and random.random() < PROB_CRASH:
-            logger.info("Letting one device crash...")
-            device_index = random.randint(0, len(devices) - 1)
-            devices[device_index].cancelled = True
-            devices.pop(device_index)
+            span_device()
         if random.random() < PROB_CREATE:
-            logger.info("Starting up new device")
-            devices.append(Device(group.Temperature).start())
+            kill_device()
 
         time.sleep(SLEEP_TIME)

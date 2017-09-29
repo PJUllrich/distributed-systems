@@ -29,17 +29,19 @@ class Connector(threading.Thread):
         Connects to a Multicast socket on the address and port specified in the Category
         of the Device
         """
-        self.sock_multicast = SocketFactory.create_socket(self.communicator.category.MCAST_ADDR,
-                                                          self.communicator.category.MCAST_PORT)
+        self.sock_multicast = self._create_socket(self.communicator.category.MCAST_PORT)
 
     def start_individual_listener(self, port):
         if self.listener_individual is not None:
             self.listener_individual.cancelled = True
 
         self.port = port
-        self.sock_individual = SocketFactory.create_socket(self.communicator.category.MCAST_ADDR, self.port)
+        self.sock_individual = self._create_socket(self.port)
         self.listener_individual = Listener(self.sock_individual, self.queue_receive)
         self.listener_individual.start()
+
+    def _create_socket(self, port):
+        return SocketFactory.create_socket(self.communicator.category.MCAST_ADDR, port)
 
     def run(self):
         """

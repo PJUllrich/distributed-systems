@@ -5,8 +5,8 @@ from destinator.util.vector import Vector
 
 class MessageFactory:
     FIELD_VECTOR = "VECTOR"
-    FIELD_PAYLOAD = "PAYLOAD"
     FIELD_TYPE = "TYPE"
+    FIELD_PAYLOAD = "PAYLOAD"
 
     @classmethod
     def pack(cls, vector, message_type, payload):
@@ -30,8 +30,8 @@ class MessageFactory:
         """
         data = {
             cls.FIELD_VECTOR: vector.__dict__,
-            cls.FIELD_PAYLOAD: payload,
-            cls.FIELD_TYPE: message_type
+            cls.FIELD_TYPE: message_type,
+            cls.FIELD_PAYLOAD: payload
         }
         return json.dumps(data)
 

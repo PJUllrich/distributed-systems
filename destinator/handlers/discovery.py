@@ -56,24 +56,30 @@ class Discovery(BaseHandler):
         super().handle(msg)
 
         vector, message_type, payload = MessageFactory.unpack(msg)
-        if message_type == messages.DISCOVERY_RESPONSE:
-            data = json.loads(payload)
-            identifier = data.get(self.FIELD_IDENTIFIER)
-            process_id = data.get(self.FIELD_PROCESS)
-
-            if identifier == self.identifer:
-                logger.info(f"Received relevant discovery response message. I am "
-                            f"process {process_id}")
-                self.parent.vector.process_id = process_id
-                # Initial port is -1, so remove it from vector
-                if -1 in self.parent.vector.index:
-                    self.parent.vector.index.pop(-1)
-
-                self.parent.connector.start_individual_listener(process_id)
-
-                self.end_discovery()
-            else:
-                logger.info(f"Received discovery response message, but not intent "
-                               f"for me. My identifier {self.identifer} vs {identifier}")
-        else:
+        if not message_type == messages.DISCOVERY_RESPONSE:
             logger.debug("Received message, but still in discovery mode")
+            return
+
+        identifier, process_id = self._unpack_payload(payload)
+
+        if not identifier == self.identifer:
+            logger.info(f"Received discovery response message, but not intent "
+                        f"for me. My identifier {self.identifer} vs {identifier}")
+            return
+
+        logger.info(f"Received relevant discovery response message. I am "
+                    f"process {process_id}")
+        self.parent.vector.process_id = process_id
+        # Initial port is -1, so remove it from vector
+        if -1 in self.parent.vector.index:
+            self.parent.vector.index.pop(-1)
+
+        self.parent.connector.start_individual_listener(process_id)
+
+        self.end_discovery()
+
+    def _unpack_payload(self, payload):
+        data = json.loads(payload)
+        identifier = data.get(self.FIELD_IDENTIFIER)
+        process_id = data.get(self.FIELD_PROCESS)
+        return identifier, process_id
