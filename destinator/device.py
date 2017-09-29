@@ -33,6 +33,8 @@ class Device(threading.Thread):
             if self.communicator.message_handler.is_discovering is False:
                 if rd.random() < 0.000001:
                     self.send(rd.randint(-10, 30))
+            else:
+                logger.info(f"{threading.get_ident()} - Device is not ready to send information [discovery mode]")
 
         logger.warning(f"{threading.get_ident()} - Device crashed)")
 
