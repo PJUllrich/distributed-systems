@@ -69,6 +69,7 @@ class Connector(threading.Thread):
         process_id
             The process_id of the receiving device
         """
-        logger.debug(f"Thread {threading.get_ident()}: Sending to {process_id}: {msg}")
+        logger.debug(f"Thread {threading.get_ident()}: Sending from {self.port} to "
+                     f"{process_id}: {msg}")
         self.sock_multicast.sendto(msg.encode(), (self.communicator.category.MCAST_ADDR,
                                                  process_id))
