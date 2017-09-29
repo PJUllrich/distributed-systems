@@ -7,7 +7,6 @@ from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
 from destinator.util.vector import Vector
-import destinator.const.messages as messages
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +72,7 @@ class MessageHandler(threading.Thread):
         """
         self.active_handler.handle(msg)
 
-    def send(self, payload, message_type=messages.UNDEFINED, process=None,
-             increment=True):
+    def send(self, message_type, payload, process=None, increment=True):
         """
         Puts a message into the sending Queue. Increments the message counter by 1
         if not otherwise specified (counter should not be incremented during discovery).
@@ -95,7 +93,7 @@ class MessageHandler(threading.Thread):
         if increment:
             self.vector.index[self.vector.process_id] += 1
 
-        msg = MessageFactory.pack(self.vector, payload, message_type)
+        msg = MessageFactory.pack(self.vector, message_type, payload)
         self.queue_send.put((process, msg))
 
     def deliver(self, msg):

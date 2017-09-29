@@ -1,7 +1,7 @@
 import json
+import logging
 import threading
 from abc import ABC
-import logging
 
 import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
@@ -32,7 +32,7 @@ class BaseHandler(ABC):
         msg:    str
             Received JSON data
         """
-        vector, payload, message_type = MessageFactory.unpack(msg)
+        vector, message_type, payload = MessageFactory.unpack(msg)
 
         if self.parent.leader:
             if -1 in vector.index:
@@ -40,9 +40,9 @@ class BaseHandler(ABC):
                 logger.warning(f"My vector is {self.parent.vector.index}")
 
         handle_function = self.handlers.get(message_type, self.handle_unknown)
-        handle_function(vector, payload, message_type)
+        handle_function(vector, message_type, payload)
 
-    def handle_discovery_msg(self, vector, payload, message_type):
+    def handle_discovery_msg(self, vector, message_type, payload):
         """
         Adds a Process ID to the Vector index if the index does not yet contain the
         Process ID.
@@ -59,6 +59,11 @@ class BaseHandler(ABC):
         message_type: str
             The group of the message
         """
+        if not message_type == messages.DISCOVERY:
+            logger.warning(f'discovery function was called for the wrong '
+                           f'message text {message_type}')
+            return
+
         if self.parent.leader:
             my_port = self.parent.connector.port
             used_ports = self.parent.vector.index.keys()
@@ -82,12 +87,12 @@ class BaseHandler(ABC):
             }
             msg = json.dumps(data)
 
-            self.parent.send(msg, messages.DISCOVERY_RESPONSE, increment=False)
+            self.parent.send(messages.DISCOVERY_RESPONSE, msg, increment=False)
         else:
             logger.debug("Received DISCOVERY message, but ignoring it [i am not a "
                          "leader]")
 
-    def handle_discovery_msg_response(self, vector, payload, message_type):
+    def handle_discovery_msg_response(self, vector, message_type, payload):
         """
         Handles a DISCOVERY_RESPONSE message. Adds any Process IDs to the own Vector
         index and updates the message counts of the existing Process IDs.
@@ -112,7 +117,7 @@ class BaseHandler(ABC):
                     f"Process received DISCOVERY_RESPONSE and added Process: "
                     f"{vector.process_id}. New index: {self.parent.vector.index}")
 
-    def handle_unknown(self, vector, payload, message_type):
+    def handle_unknown(self, vector, message_type, payload):
         """
         The default function to handle incoming messages. At the moment, only logs the
         reception of the message.

@@ -26,7 +26,7 @@ class VectorTimestamp(BaseHandler):
         """
         logger.info(f'VectorTimestamp called Default function for message: {text}')
 
-        msg = MessageFactory.pack(vector, text)
+        msg = MessageFactory.pack(vector, None, text)
         self.b_deliver(msg)
 
     def co_multicast(self, text):
@@ -58,7 +58,7 @@ class VectorTimestamp(BaseHandler):
         msg:    str
             The message in JSON format
         """
-        vector, _ = MessageFactory.unpack(msg)
+        vector, _, _ = MessageFactory.unpack(msg)
         if self.is_old(vector):
             return
 

@@ -31,7 +31,7 @@ class Communicator:
         self.connector.start()
         self.message_handler.start()
 
-    def send(self, payload, message_type):
+    def send(self, message_type, payload):
         """
         Forwards a text that should be sent to the MessageHandler, which then handles
         the actual sending.
@@ -43,7 +43,7 @@ class Communicator:
         message_type: str
             The group of the message
         """
-        self.message_handler.send(payload, message_type)
+        self.message_handler.send(message_type, payload)
 
     def deliver(self, msg):
         """

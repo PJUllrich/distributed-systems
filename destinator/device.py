@@ -1,8 +1,8 @@
 import logging
-import threading
 import random as rd
-import destinator.const.messages as messages
+import threading
 
+import destinator.const.messages as messages
 from destinator.communicator import Communicator
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class Device(threading.Thread):
         logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
 
     def send(self, msg):
-        self.communicator.send(msg, messages.TEMPERATURE)
+        self.communicator.send(messages.TEMPERATURE, msg)
 
     def set_leader(self, is_leader):
         self.communicator.message_handler.leader = is_leader

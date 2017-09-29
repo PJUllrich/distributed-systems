@@ -9,7 +9,7 @@ class MessageFactory:
     FIELD_TYPE = "TYPE"
 
     @classmethod
-    def pack(cls, vector, payload, message_type):
+    def pack(cls, vector, message_type, payload):
         """
         Packs a Vector object and a text into a JSON string.
 
@@ -60,8 +60,7 @@ class MessageFactory:
 
         vector_json = data.get(cls.FIELD_VECTOR)
         vector = Vector.from_json(vector_json)
-
-        payload = data.get(cls.FIELD_PAYLOAD)
         message_type = data.get(cls.FIELD_TYPE)
+        payload = data.get(cls.FIELD_PAYLOAD)
 
-        return vector, payload, message_type
+        return vector, message_type, payload

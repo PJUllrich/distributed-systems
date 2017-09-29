@@ -1,10 +1,10 @@
-import logging
 import json
+import logging
 
 import destinator.const.messages as messages
+import destinator.util.util as util
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
-import destinator.util.util as util
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class Discovery(BaseHandler):
             return
 
         msg = self.identifer
-        self.parent.send(msg, messages.DISCOVERY, increment=False)
+        self.parent.send(messages.DISCOVERY, msg, increment=False)
 
     def end_discovery(self):
         """
@@ -55,7 +55,7 @@ class Discovery(BaseHandler):
         """
         super().handle(msg)
 
-        vector, payload, message_type = MessageFactory.unpack(msg)
+        vector, message_type, payload = MessageFactory.unpack(msg)
         if message_type == messages.DISCOVERY_RESPONSE:
             data = json.loads(payload)
             identifier = data.get(self.FIELD_IDENTIFIER)
