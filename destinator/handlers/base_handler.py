@@ -5,6 +5,7 @@ from abc import ABC
 
 import destinator.const.messages as messages
 from destinator.factories.message_factory import MessageFactory
+from destinator.handlers.bully import Bully
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +16,15 @@ class BaseHandler(ABC):
 
     def __init__(self, message_handler):
         self.parent = message_handler
+
+        self.handler_bully = Bully(self.parent)
         self.handlers = {
             messages.DISCOVERY: self.handle_discovery_msg,
-            messages.DISCOVERY_RESPONSE: self.handle_discovery_msg_response
+            messages.DISCOVERY_RESPONSE: self.handle_discovery_msg_response,
+
+            messages.ELECTION: self.handler_bully.handle_election,
+            messages.VOTE: self.handler_bully.handle_vote,
+            messages.COORDINATOR: self.handler_bully.handle_coordinate,
         }
 
     def handle(self, msg):

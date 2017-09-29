@@ -45,7 +45,9 @@ class Device(threading.Thread):
     def work(self):
         if self.communicator.is_discovering is False:
             if rd.random() < 0.000001:
-                self.send(rd.randint(-10, 30))
+                #self.send(rd.randint(-10, 30))
+                self.communicator.message_handler.active_handler.handler_bully\
+                    .call_for_election()
         else:
             logger.info(f"{threading.get_ident()} - Device is not ready to send "
                         f"information [discovery mode]")
