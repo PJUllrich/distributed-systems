@@ -8,9 +8,6 @@ import destinator.util.util as util
 
 logger = logging.getLogger(__name__)
 
-# Time (in seconds) a process will wait until stopping to discover new Processes
-DISCOVERY_TIMEOUT = 5
-
 
 class Discovery(BaseHandler):
     def __init__(self, parent_handler):
@@ -21,6 +18,13 @@ class Discovery(BaseHandler):
         """
         Creates a new Vector information containing information about the
         VectorTimestamp object.
+        Sends out a DISCOVERY message in order to discover other active processes in the
+        multicast group.
+        """
+        self.send_discover_message()
+
+    def send_discover_message(self):
+        """
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
