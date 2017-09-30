@@ -27,7 +27,7 @@ class BaseHandler(ABC):
             messages.COORDINATOR: self.handler_bully.handle_coordinate,
         }
 
-    def handle(self, msg):
+    def handle(self, package):
         """
         Default function for handling messages. Looks up a function in the handlers
         dict and executes the function if an applicable one is found. Otherwise calls
@@ -36,9 +36,10 @@ class BaseHandler(ABC):
 
         Parameters
         ----------
-        msg:    str
-            Received JSON data
+        package: Package
+            The incoming package
         """
+        msg = package.content
         vector, message_type, payload = MessageFactory.unpack(msg)
 
         if self.parent.leader:

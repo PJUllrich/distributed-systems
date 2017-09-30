@@ -74,4 +74,4 @@ class Connector(threading.Thread):
         logger.debug(f"Thread {threading.get_ident()}: Sending from {self.port} to "
                      f"{process_id}: {msg}")
         self.sock_multicast.sendto(msg.encode(), (self.communicator.category.MCAST_ADDR,
-                                                 process_id))
+                                                  process_id))

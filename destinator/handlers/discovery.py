@@ -48,18 +48,19 @@ class Discovery(BaseHandler):
         self.parent.scheduler.remove_job(self.JOB_ID)
         self.parent.end_discovery()
 
-    def handle(self, msg):
+    def handle(self, package):
         """
         Overwrites the handle function from the BaseHandler parent class. Calls the
         super handle function with the message. Checks afterwards whether the received
         message was a DISCOVERY_RESPONSE message. Ends discovery, if yes.
         Parameters
         ----------
-        msg:    str
-            The incoming message in JSON format
+        package: Package
+            The incoming package
         """
-        super().handle(msg)
+        super().handle(package)
 
+        msg = package.content
         vector, message_type, payload = MessageFactory.unpack(msg)
         if not message_type == messages.DISCOVERY_RESPONSE:
             logger.debug("Received message, but still in discovery mode")

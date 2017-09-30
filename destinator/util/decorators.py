@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 def verify_message(func):
     @wraps(func)
-    def wrapper(obj, msg):
+    def wrapper(obj, package):
+        msg = package.content
         vector, message_type, text = MessageFactory.unpack(msg)
 
         # Ignore own messages
@@ -27,6 +28,6 @@ def verify_message(func):
         if text == messages.DISCOVERY and not obj.leader:
             return
 
-        return func(obj, msg)
+        return func(obj, package)
 
     return wrapper

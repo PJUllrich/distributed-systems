@@ -53,8 +53,8 @@ class MessageHandler(threading.Thread):
         available and handles the message.
         """
         if not self.connector.queue_receive.empty():
-            msg = self.connector.queue_receive.get()
-            self.handle(msg)
+            package = self.connector.queue_receive.get()
+            self.handle(package)
 
     def _transmit(self):
         """
@@ -66,15 +66,15 @@ class MessageHandler(threading.Thread):
             self.connector.queue_send.put(msg)
 
     @deco.verify_message
-    def handle(self, msg):
+    def handle(self, package):
         """
         Forwards a message to the handle function of the active handler.
         Parameters
         ----------
-        msg:    str
-            The incoming message in JSON format
+        package: Package
+            The incoming package
         """
-        self.active_handler.handle(msg)
+        self.active_handler.handle(package)
 
     def send(self, message_type, payload, process=None, increment=True):
         """
