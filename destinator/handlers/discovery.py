@@ -55,18 +55,16 @@ class Discovery(BaseHandler):
         message was a DISCOVERY_RESPONSE message. Ends discovery, if yes.
         Parameters
         ----------
-        package: Package
+        package: JsonPackage
             The incoming package
         """
         super().handle(package)
 
-        msg = package.content
-        vector, message_type, payload = MessageFactory.unpack(msg)
-        if not message_type == messages.DISCOVERY_RESPONSE:
+        if not package.message_type == messages.DISCOVERY_RESPONSE:
             logger.debug("Received message, but still in discovery mode")
             return
 
-        identifier, process_id = self._unpack_payload(payload)
+        identifier, process_id = self._unpack_payload(package.payload)
 
         if not identifier == self.identifier:
             logger.info(f"Received discovery response message, but not intent "

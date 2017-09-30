@@ -7,6 +7,7 @@ import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
+from destinator.util.package import JsonPackage
 from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,8 @@ class MessageHandler(threading.Thread):
         """
         if not self.connector.queue_receive.empty():
             package = self.connector.queue_receive.get()
-            self.handle(package)
+            json_package = JsonPackage(package)
+            self.handle(json_package)
 
     def _transmit(self):
         """

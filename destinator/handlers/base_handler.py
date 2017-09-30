@@ -36,21 +36,18 @@ class BaseHandler(ABC):
 
         Parameters
         ----------
-        package: Package
+        package: JsonPackage
             The incoming package
         """
-        msg = package.content
-        vector, message_type, payload = MessageFactory.unpack(msg)
-
         if self.parent.leader:
-            if -1 in vector.index:
-                logger.warning(f"Received invalid vector {vector.index}")
+            if -1 in package.vector.index:
+                logger.warning(f"Received invalid vector {package.vector.index}")
                 logger.warning(f"My vector is {self.parent.vector.index}")
 
-        handle_function = self.handlers.get(message_type, self.handle_unknown)
-        handle_function(vector, message_type, payload)
+        handle_function = self.handlers.get(package.message_type, self.handle_unknown)
+        handle_function(package)
 
-    def handle_discovery_msg(self, vector, message_type, payload):
+    def handle_discovery_msg(self, package):
         """
         Adds a Process ID to the Vector index if the index does not yet contain the
         Process ID.
@@ -60,16 +57,12 @@ class BaseHandler(ABC):
 
         Parameters
         ----------
-        vector: Vector
-            The Vector object received with the message
-        payload: str
-            The message text, should be 'DISCOVERY_RESPONSE'
-        message_type: str
-            The group of the message
+        package: JsonPackage
+            The incoming package
         """
-        if not message_type == messages.DISCOVERY:
+        if not package.message_type == messages.DISCOVERY:
             logger.warning(f'discovery function was called for the wrong '
-                           f'message text {message_type}')
+                           f'message text {package.message_type}')
             return
 
         if not self.parent.leader:
@@ -80,8 +73,8 @@ class BaseHandler(ABC):
         my_port = self.parent.connector.port
         used_ports = self.parent.vector.index.keys()
         assigned_port = list(used_ports)[-1] + 1
-        vector.process_id = assigned_port
-        logger.debug(f"Got discover message from {payload}. "
+        package.vector.process_id = assigned_port  # TODO is this line necessary
+        logger.debug(f"Got discover message from {package.payload}. "
                      f"My port {my_port}. "
                      f"Found devices: {used_ports}. "
                      f"Assigning port {assigned_port} to new device. "
@@ -90,56 +83,48 @@ class BaseHandler(ABC):
             self.parent.vector.index.get(my_port)
 
         logger.info(f"Thread {threading.get_ident()}: "
-                    f"Leader added Process: {vector.process_id}. "
+                    f"Leader added Process: {package.vector.process_id}. "
                     f"New index: {self.parent.vector.index}")
 
         data = {
             self.FIELD_PROCESS: assigned_port,
-            self.FIELD_IDENTIFIER: payload
+            self.FIELD_IDENTIFIER: package.payload
         }
         msg = json.dumps(data)
 
         self.parent.send(messages.DISCOVERY_RESPONSE, msg, increment=False)
 
-    def handle_discovery_msg_response(self, vector, message_type, payload):
+    def handle_discovery_msg_response(self, package):
         """
         Handles a DISCOVERY_RESPONSE message. Adds any Process IDs to the own Vector
         index and updates the message counts of the existing Process IDs.
 
         Parameters
         ----------
-        vector: Vector
-            The Vector object received with the message
-        payload: str
-            The message text, should be 'DISCOVERY_RESPONSE'
-        message_type: str
-            The group of the message
+        package: JsonPackage
+            The incoming package
         """
-        if not message_type == messages.DISCOVERY_RESPONSE:
+        if not package.message_type == messages.DISCOVERY_RESPONSE:
             logger.warning(f'discovery_response function was called for the wrong '
-                           f'message text {message_type}')
+                           f'message text {package.message_type}')
             return
 
-        self.parent.vector.index.update(vector.index)
+        self.parent.vector.index.update(package.vector.index)
 
         logger.info(f"Thread {threading.get_ident()}: "
                     f"Process received DISCOVERY_RESPONSE and added Process: "
-                    f"{vector.process_id}. New index: {self.parent.vector.index}")
+                    f"{package.vector.process_id}. New index: {self.parent.vector.index}")
 
-    def handle_unknown(self, vector, message_type, payload):
+    def handle_unknown(self, package):
         """
         The default function to handle incoming messages. At the moment, only logs the
         reception of the message.
 
         Parameters
         ----------
-        vector: Vector
-            The Vector object received with the message
-        payload: str
-            The message text received with the message
-        message_type: str
-            The group of the message
+        package: JsonPackage
+            The incoming package
         """
-        logger.warning(f"Received a message {message_type} with payload {payload} "
-                    f"for which no handler exists")
-        self.parent.vector.index.update(vector.index)
+        logger.warning(f"Received a message {package.message_type} with payload "
+                       f"{package.payload} for which no handler exists")
+        self.parent.vector.index.update(package.vector.index)

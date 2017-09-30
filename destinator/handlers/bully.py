@@ -15,11 +15,11 @@ class Bully:
         for process_id in higher_processes:
             self.parent.send(messages.ELECTION, "hi", process_id)
 
-    def handle_election(self, vector, payload, message_type):
-        logger.warning(f"Received election message from {vector.process_id}")
+    def handle_election(self, package):
+        logger.warning(f"Received election message from {package.vector.process_id}")
 
-    def handle_vote(self, vector, payload, message_type):
-        logger.warning(f"Received vote message from {vector.process_id}")
+    def handle_vote(self, package):
+        logger.warning(f"Received vote message from {package.vector.process_id}")
 
-    def handle_coordinate(self, vector, payload, message_type):
-        logger.warning(f"Received coordinate message from {vector.process_id}")
+    def handle_coordinate(self, package):
+        logger.warning(f"Received coordinate message from {package.vector.process_id}")
