@@ -1,5 +1,6 @@
 import logging
 import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
 
 import destinator.util.decorators as deco
@@ -21,6 +22,9 @@ class MessageHandler(threading.Thread):
         self.connector = connector
 
         self.queue_send = Queue()
+
+        self.scheduler = BackgroundScheduler()
+        self.scheduler.start()
 
         self.leader = False
         self.active_handler = None

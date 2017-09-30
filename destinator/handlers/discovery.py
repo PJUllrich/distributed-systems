@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class Discovery(BaseHandler):
+    JOB_ID = 'DISCOVERY_JOB'
+
     def __init__(self, parent_handler):
         super().__init__(parent_handler)
-        self.identifer = util.identifier()
+        self.identifier = util.identifier()
 
     def start_discovery(self):
         """
@@ -21,6 +23,8 @@ class Discovery(BaseHandler):
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
+        self.parent.scheduler.add_job(self.send_discover_message, 'interval',
+                                      seconds=5, id=self.JOB_ID)
         self.send_discover_message()
 
     def send_discover_message(self):
@@ -32,7 +36,7 @@ class Discovery(BaseHandler):
             self.end_discovery()
             return
 
-        msg = self.identifer
+        msg = self.identifier
         self.parent.send(messages.DISCOVERY, msg, increment=False)
 
     def end_discovery(self):
@@ -41,6 +45,7 @@ class Discovery(BaseHandler):
         which switches the active handler from the Discovery to the VectorTimestamp
         handler.
         """
+        self.parent.scheduler.remove_job(self.JOB_ID)
         self.parent.end_discovery()
 
     def handle(self, msg):
@@ -62,9 +67,9 @@ class Discovery(BaseHandler):
 
         identifier, process_id = self._unpack_payload(payload)
 
-        if not identifier == self.identifer:
+        if not identifier == self.identifier:
             logger.info(f"Received discovery response message, but not intent "
-                        f"for me. My identifier {self.identifer} vs {identifier}")
+                        f"for me. My identifier {self.identifier} vs {identifier}")
             return
 
         logger.info(f"Received relevant discovery response message. I am "
