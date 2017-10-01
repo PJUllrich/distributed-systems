@@ -38,7 +38,10 @@ class MessageHandler(threading.Thread):
         Starts pulling messages from the Connector.
         Starts transmitting messages to the Connector for broadcasting.
         """
-        self.vector = self.create_vector()
+        self.vector = Vector.create_vector(
+            self.communicator.category.MCAST_ADDR,
+            self.communicator.connector.port
+        )
 
         self.is_discovering = True
         self.active_handler = Discovery(self)
@@ -123,24 +126,3 @@ class MessageHandler(threading.Thread):
         self.active_handler = VectorTimestamp(self)
         self.is_discovering = False
 
-    def create_vector(self):
-        """
-        Creates a new Vector object with the group id and process id of the Connector
-        object. Sets the counter for own messages to 0.
-
-        Returns
-        -------
-        Vector
-            A new Vector object holding information about Group ID, Process ID,
-            and own message count
-
-        """
-        id_group_own = self.communicator.category.MCAST_ADDR
-        id_process_id_own = self.communicator.connector.port
-        id_message_own = 0
-
-        index = {
-            id_process_id_own: id_message_own
-        }
-
-        return Vector(id_group_own, id_process_id_own, index)
