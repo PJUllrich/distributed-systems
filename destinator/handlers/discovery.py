@@ -3,7 +3,6 @@ import logging
 
 import destinator.const.messages as messages
 import destinator.util.util as util
-from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
@@ -11,10 +10,16 @@ logger = logging.getLogger(__name__)
 
 class Discovery(BaseHandler):
     JOB_ID = 'DISCOVERY_JOB'
+    JOB_TIMEOUT = 15
 
     def __init__(self, parent_handler):
         super().__init__(parent_handler)
         self.identifier = util.identifier()
+
+        self.job = self.parent.scheduler.add_job(self.send_discover_message, 'interval',
+                                                 minutes=self.JOB_TIMEOUT / 60,
+                                                 replace_existing=True, id=self.JOB_ID)
+        self.job.pause()
 
     def start_discovery(self):
         """
@@ -23,9 +28,8 @@ class Discovery(BaseHandler):
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
-        self.parent.scheduler.add_job(self.send_discover_message, 'interval',
-                                      seconds=5, id=self.JOB_ID)
         self.send_discover_message()
+        self.job.resume()
 
     def send_discover_message(self):
         """
@@ -45,7 +49,7 @@ class Discovery(BaseHandler):
         which switches the active handler from the Discovery to the VectorTimestamp
         handler.
         """
-        self.parent.scheduler.remove_job(self.JOB_ID)
+        self.job.pause()
         self.parent.end_discovery()
 
     def handle(self, package):
@@ -82,8 +86,9 @@ class Discovery(BaseHandler):
 
         self.end_discovery()
 
-    def _unpack_payload(self, payload):
+    @classmethod
+    def unpack_payload(cls, payload):
         data = json.loads(payload)
-        identifier = data.get(self.FIELD_IDENTIFIER)
-        process_id = data.get(self.FIELD_PROCESS)
+        identifier = data.get(cls.FIELD_IDENTIFIER)
+        process_id = data.get(cls.FIELD_PROCESS)
         return identifier, process_id

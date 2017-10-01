@@ -10,6 +10,8 @@ class ReceivedPackage(Package):
     def __init__(self, content, sender):
         super().__init__(content)
         self.sender = sender
+        self.sender_address = sender[0]
+        self.sender_port = sender[1]
 
 
 class JsonPackage(ReceivedPackage):

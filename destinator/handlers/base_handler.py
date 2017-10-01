@@ -4,7 +4,6 @@ import threading
 from abc import ABC
 
 import destinator.const.messages as messages
-from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.bully import Bully
 
 logger = logging.getLogger(__name__)
@@ -16,6 +15,8 @@ class BaseHandler(ABC):
 
     def __init__(self, message_handler):
         self.parent = message_handler
+
+        self.ports_identifier = {}
 
         self.handler_bully = Bully(self.parent)
         self.handlers = {
@@ -71,19 +72,22 @@ class BaseHandler(ABC):
             return
 
         my_port = self.parent.connector.port
+
         used_ports = self.parent.vector.index.keys()
-        assigned_port = list(used_ports)[-1] + 1
-        package.vector.process_id = assigned_port  # TODO is this line necessary
+        assigned_port = self.ports_identifier.get(package.payload,
+                                                  list(used_ports)[-1] + 1)
+        self.ports_identifier[package.payload] = assigned_port
+
+        self.parent.vector.index[assigned_port] = \
+            self.parent.vector.index.get(my_port)
+
         logger.debug(f"Got discover message from {package.payload}. "
                      f"My port {my_port}. "
                      f"Found devices: {used_ports}. "
                      f"Assigning port {assigned_port} to new device. "
                      f"My vector is {self.parent.vector.index.get(my_port)}")
-        self.parent.vector.index[assigned_port] = \
-            self.parent.vector.index.get(my_port)
 
-        logger.info(f"Thread {threading.get_ident()}: "
-                    f"Leader added Process: {package.vector.process_id}. "
+        logger.info(f"Leader added Process: {assigned_port}. "
                     f"New index: {self.parent.vector.index}")
 
         data = {
@@ -108,6 +112,11 @@ class BaseHandler(ABC):
             logger.warning(f'discovery_response function was called for the wrong '
                            f'message text {package.message_type}')
             return
+
+        # save all discovery response messages (avoid re-assigning of process ids)
+        from destinator.handlers.discovery import Discovery
+        identifier, process_id = Discovery.unpack_payload(package.payload)
+        self.ports_identifier[identifier] = process_id
 
         self.parent.vector.index.update(package.vector.index)
 
