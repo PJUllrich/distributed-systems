@@ -4,8 +4,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
 
 import destinator.util.decorators as deco
+import destinator.util.util as util
 from destinator.factories.message_factory import MessageFactory
-from destinator.handlers.discovery import Discovery
+from destinator.handlers.base_handler import BaseHandler
 from destinator.handlers.vector_timestamp import VectorTimestamp
 from destinator.util.package import JsonPackage
 from destinator.util.vector import Vector
@@ -17,7 +18,6 @@ class MessageHandler(threading.Thread):
     def __init__(self, communicator, connector):
         super().__init__()
         self.cancelled = False
-        self.is_discovering = None
 
         self.communicator = communicator
         self.connector = connector
@@ -28,6 +28,7 @@ class MessageHandler(threading.Thread):
         self.scheduler.start()
 
         self.leader = False
+        self.identifier = None
         self.active_handler = None
         self.vector = None
 
@@ -43,9 +44,8 @@ class MessageHandler(threading.Thread):
             self.communicator.connector.port
         )
 
-        self.is_discovering = True
-        self.active_handler = Discovery(self)
-        self.active_handler.start_discovery()
+        self.identifier = util.identifier()
+        self.active_handler = BaseHandler(self)
 
         while not self.cancelled:
             self._pull()
@@ -124,5 +124,7 @@ class MessageHandler(threading.Thread):
         """
         logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
-        self.is_discovering = False
 
+    @property
+    def is_discovered(self):
+        return 0 < self.communicator.connector.port

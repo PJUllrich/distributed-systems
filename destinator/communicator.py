@@ -27,8 +27,8 @@ class Communicator:
         self.connector.port = self.category.STARTING_PORT
 
     @property
-    def is_discovering(self):
-        return self.message_handler.is_discovering
+    def is_discovered(self):
+        return self.message_handler.is_discovered
 
     def start(self):
         """
