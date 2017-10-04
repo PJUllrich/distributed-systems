@@ -16,14 +16,14 @@ PROB_CRASH = 0.2
 SLEEP_TIME = 1
 
 
-def span_device():
+def kill_device():
     logger.info("Letting one device crash...")
     device_index = random.randint(0, len(devices) - 1)
     devices[device_index].cancelled = True
     devices.pop(device_index)
 
 
-def kill_device():
+def create_device():
     logger.info("Starting up new device")
     devices.append(Device(group.Temperature).start())
 
@@ -41,8 +41,8 @@ if __name__ == '__main__':
 
     while True:
         if len(devices) is not 0 and random.random() < PROB_CRASH:
-            span_device()
-        if random.random() < PROB_CREATE:
             kill_device()
+        if random.random() < PROB_CREATE:
+            create_device()
 
         time.sleep(SLEEP_TIME)
