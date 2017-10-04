@@ -68,7 +68,7 @@ class Discovery(BaseHandler):
             logger.debug("Received message, but still in discovery mode")
             return
 
-        identifier, process_id = self._unpack_payload(package.payload)
+        identifier, process_id = self.unpack_payload(package.payload)
 
         if not identifier == self.identifier:
             logger.info(f"Received discovery response message, but not intent "
