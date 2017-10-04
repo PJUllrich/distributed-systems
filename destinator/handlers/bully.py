@@ -7,6 +7,16 @@ logger = logging.getLogger(__name__)
 
 
 class Bully:
+    """
+    Implements the Bully algorithm which is used for leader election.
+    It basically works in 3 phases:
+     - Call for a new election
+     - Voting on elections
+     - Annouce leadership (coordinate)
+     To be able to check if processes have not responded to messages (within a
+     timeout), task scheduling is used
+    """
+
     BULLY_CALL_JOB_ID = "BULLY_JOB_CALL"
     BULLY_RESPONSE_JOB_ID = "BULLY_RESPONSE_JOB_CALL"
     BULLY_COORDINATOR_JOB_ID = "BULLY_COORDINATOR_JOB_CALL"
@@ -20,23 +30,35 @@ class Bully:
         self.election_was_answered = False
         self.last_coordinator_msg = None
 
-        self.job_call = self.parent.scheduler.add_job(
+        self._init_jobs()
+
+        # Start an election instantly
+        self.call_for_election()
+
+    def _init_jobs(self):
+        """
+        Initiate the used jobs
+        """
+        scheduler = self.parent.scheduler
+
+        self.job_call = scheduler.add_job(
             self.call_for_election, 'interval', minutes=self.CALL_TIMEOUT / 60,
             replace_existing=True, id=self.BULLY_CALL_JOB_ID)
-        self.job_call_response = self.parent.scheduler.add_job(
+        self.job_call_response = scheduler.add_job(
             self._check_election_responses, 'interval',
             minutes=self.RESPONSE_TIMEOUT / 60, replace_existing=True,
             id=self.BULLY_RESPONSE_JOB_ID)
         self.job_call_response.pause()
-        self.job_coordinator = self.parent.scheduler.add_job(
+        self.job_coordinator = scheduler.add_job(
             self._check_coordinator_response, 'interval',
             minutes=self.COORDINATE_TIMEOUT / 60, replace_existing=True,
             id=self.BULLY_COORDINATOR_JOB_ID)
         self.job_coordinator.pause()
 
-        self.call_for_election()
-
     def call_for_election(self):
+        """
+        Start a new election process to determine the (new) leader
+        """
         if self.process_id <= 0:
             logger.debug(f"P {self.process_id}: Process ID is not yet set")
             return
@@ -51,14 +73,19 @@ class Bully:
         self.job_call_response.pause()
         self.election_was_answered = False
 
+        # Sending election message to all higher processes
         process_ids = self.parent.vector.index.keys()
-        higher_processes = [x for x in process_ids if self.process_id < x]
-        for process_id in higher_processes:
+        higher_process_ids = [x for x in process_ids if self.process_id < x]
+        for process_id in higher_process_ids:
             self.parent.send(messages.ELECTION, None, process_id)
 
         self.resume_job(self.job_call_response, self.RESPONSE_TIMEOUT)
 
     def _check_election_responses(self):
+        """
+        Check whether all expected processes have responded, if not announce own
+        leadership
+        """
         self.job_call_response.pause()
 
         if self.election_was_answered is True:
@@ -71,6 +98,13 @@ class Bully:
         self.parent.send(messages.COORDINATOR, None, None)
 
     def handle_election(self, package):
+        """
+        Handle an election message
+        Parameters
+        ----------
+        package: Package
+            The received json package
+        """
         if not package.message_type == messages.ELECTION:
             logger.error(
                 f"P {self.process_id}: Asked to handle wrong message type "
@@ -86,6 +120,13 @@ class Bully:
             self.parent.send(messages.VOTE, self.process_id, package.vector.process_id)
 
     def handle_vote(self, package):
+        """
+        Handle a vote message
+        Parameters
+        ----------
+        package: Package
+            The received json package
+        """
         if not package.message_type == messages.VOTE:
             logger.error(
                 f"P {self.process_id}: Asked to handle wrong message type "
@@ -108,6 +149,10 @@ class Bully:
             self.resume_job(self.job_coordinator, self.COORDINATE_TIMEOUT)
 
     def _check_coordinator_response(self):
+        """
+        Check if after sending a vote message, also a coordinating (leader
+        announcement) message was received
+        """
         self.job_coordinator.pause()
 
         if self.last_coordinator_msg is None or self.last_coordinator_msg < time.time() \
@@ -118,6 +163,13 @@ class Bully:
             self.call_for_election()
 
     def handle_coordinate(self, package):
+        """
+        Handle a coordinate message
+        Parameters
+        ----------
+        package: Package
+            The received json package
+        """
         if not package.message_type == messages.COORDINATOR:
             logger.error(
                 f"P {self.process_id}: Asked to handle wrong message type "
@@ -147,9 +199,21 @@ class Bully:
 
     @property
     def process_id(self):
+        """
+        Gets the own process id
+        Returns
+        -------
+        int
+        """
         return self.parent.vector.process_id
 
     def resume_job(self, job, interval):
-        # Let job start again with a the full interval to go.
+        """
+        Let job start again with a the full interval to go.
+        Parameters
+        ----------
+        job: Job
+            The job to resume
+        """
         job.reschedule('interval', minutes=interval / 60)
         job.resume()
