@@ -22,6 +22,14 @@ class Communicator:
     def category(self):
         return self.device.category
 
+    def set_leader(self, is_leader):
+        self.message_handler.leader = is_leader
+        self.connector.port = self.category.STARTING_PORT
+
+    @property
+    def is_discovering(self):
+        return self.message_handler.is_discovering
+
     def start(self):
         """
         Starts the Connector thread, which starts listening for packages on a socket.
@@ -31,17 +39,19 @@ class Communicator:
         self.connector.start()
         self.message_handler.start()
 
-    def send(self, text):
+    def send(self, message_type, payload):
         """
         Forwards a text that should be sent to the MessageHandler, which then handles
         the actual sending.
 
         Parameters
         ----------
-        text:    str
+        payload:  str
             The message as a string (only text w/o Vector data).
+        message_type: str
+            The group of the message
         """
-        self.message_handler.send(text)
+        self.message_handler.send(message_type, payload)
 
     def deliver(self, msg):
         """

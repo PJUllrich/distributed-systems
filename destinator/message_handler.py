@@ -1,5 +1,6 @@
 import logging
 import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
 
 import destinator.util.decorators as deco
@@ -15,11 +16,15 @@ class MessageHandler(threading.Thread):
     def __init__(self, communicator, connector):
         super().__init__()
         self.cancelled = False
+        self.is_discovering = None
 
         self.communicator = communicator
         self.connector = connector
 
         self.queue_send = Queue()
+
+        self.scheduler = BackgroundScheduler()
+        self.scheduler.start()
 
         self.leader = False
         self.active_handler = None
@@ -34,6 +39,7 @@ class MessageHandler(threading.Thread):
         """
         self.vector = self.create_vector()
 
+        self.is_discovering = True
         self.active_handler = Discovery(self)
         self.active_handler.start_discovery()
 
@@ -70,23 +76,29 @@ class MessageHandler(threading.Thread):
         """
         self.active_handler.handle(msg)
 
-    def send(self, text, increment=True):
+    def send(self, message_type, payload, process=None, increment=True):
         """
         Puts a message into the sending Queue. Increments the message counter by 1
         if not otherwise specified (counter should not be incremented during discovery).
 
         Parameters
         ----------
-        text:   str
+        payload: str
             The text to send in a message
+        message_type: str
+            The group of the message
+        process: int
+            The process to send the payload to (None = all processes)
         increment: bool
             Whether to increment the message counter of the Process or not.
         """
+        if process is None:
+            process = self.communicator.category.MCAST_PORT
         if increment:
             self.vector.index[self.vector.process_id] += 1
 
-        msg = MessageFactory.pack(self.vector, text)
-        self.queue_send.put(msg)
+        msg = MessageFactory.pack(self.vector, message_type, payload)
+        self.queue_send.put((process, msg))
 
     def deliver(self, msg):
         """
@@ -105,7 +117,9 @@ class MessageHandler(threading.Thread):
         Thus, from here on, incoming messages will be handled by the VectorTimestamp
         algorithm.
         """
+        logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
+        self.is_discovering = False
 
     def create_vector(self):
         """
@@ -120,11 +134,11 @@ class MessageHandler(threading.Thread):
 
         """
         id_group_own = self.communicator.category.MCAST_ADDR
-        id_process_own = threading.get_ident()
+        id_process_id_own = self.communicator.connector.port
         id_message_own = 0
 
         index = {
-            id_process_own: id_message_own
+            id_process_id_own: id_message_own
         }
 
-        return Vector(id_group_own, id_process_own, index)
+        return Vector(id_group_own, id_process_id_own, index)
