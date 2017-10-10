@@ -28,3 +28,10 @@ class JsonPackage(ReceivedPackage):
         self.vector = vector
         self.message_type = message_type
         self.payload = payload
+
+
+class UnpackedPackage:
+    def __init__(self, vector, message_type, payload):
+        self.vector = vector
+        self.message_type = message_type
+        self.payload = payload

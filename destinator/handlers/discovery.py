@@ -41,7 +41,7 @@ class Discovery(BaseHandler):
             return
 
         msg = self.identifier
-        self.parent.send(messages.DISCOVERY, msg, increment=False)
+        self.parent.send(messages.DISCOVERY, msg)
 
     def end_discovery(self):
         """

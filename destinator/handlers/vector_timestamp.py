@@ -1,5 +1,6 @@
 import logging
 
+import destinator.const.messages as messages
 from destinator.handlers.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
@@ -140,6 +141,7 @@ class VectorTimestamp(BaseHandler):
         v_old = self.parent.vector.index.get(vector.process_id, 0)
 
         if not v_new == v_old + 1:
+            self.request_missed_messages(v_old, v_new, vector.process_id)
             return False
 
         for k, val_jk in vector.index.items():
@@ -160,3 +162,21 @@ class VectorTimestamp(BaseHandler):
         """
         val_new = self.parent.vector.index.get(vector.process_id, 0) + 1
         self.parent.vector.index.update({vector.process_id: val_new})
+
+    def request_missed_messages(self, id_own, id_new, process_id):
+        """
+
+        Parameters
+        ----------
+        id_own: int
+            The message count of the process_id in the own Vector.index
+        id_new: int
+            The message count of the process_id received from that process
+        process_id: int
+            The process id of the process from which the messages shall be requested
+        """
+
+        for msg_id in range(id_own + 1, id_new):
+            logger.debug(f"Requested {id_new - id_own + 1} messages from process: "
+                         f"{process_id}")
+            self.parent.send(messages.REQUEST_MESSAGE, msg_id, process_id)

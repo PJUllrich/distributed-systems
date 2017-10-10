@@ -56,7 +56,7 @@ class Device(threading.Thread):
     def handle_message(self, msg):
         self.history.append(msg)
 
-        if len(self.history) > 7:
+        if len(self.history) > 4:
             avg = sum(self.history) / len(self.history)
             logger.info(f"{threading.get_ident()} - Average of {len(self.history)} "
                         f"messages: {avg:.2f}")
