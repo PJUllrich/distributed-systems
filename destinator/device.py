@@ -47,8 +47,8 @@ class Device(threading.Thread):
             if rd.random() < 0.000001:
                 self.send(rd.randint(-10, 30))
         else:
-            logger.info(f"{threading.get_ident()} - Device is not ready to send "
-                        f"information [discovery mode]")
+            logger.debug(f"{threading.get_ident()} - Device is not ready to send "
+                         f"information [discovery mode]")
 
     def handle_message(self, msg):
         logger.info(f"{threading.get_ident()} - Device received a message: {msg}")

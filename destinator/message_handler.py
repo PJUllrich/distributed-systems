@@ -7,6 +7,7 @@ import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
+from destinator.util.package import JsonPackage
 from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,10 @@ class MessageHandler(threading.Thread):
         Starts pulling messages from the Connector.
         Starts transmitting messages to the Connector for broadcasting.
         """
-        self.vector = self.create_vector()
+        self.vector = Vector.create_vector(
+            self.communicator.category.MCAST_ADDR,
+            self.communicator.connector.port
+        )
 
         self.is_discovering = True
         self.active_handler = Discovery(self)
@@ -53,8 +57,9 @@ class MessageHandler(threading.Thread):
         available and handles the message.
         """
         if not self.connector.queue_receive.empty():
-            msg = self.connector.queue_receive.get()
-            self.handle(msg)
+            package = self.connector.queue_receive.get()
+            json_package = JsonPackage(package)
+            self.handle(json_package)
 
     def _transmit(self):
         """
@@ -66,15 +71,15 @@ class MessageHandler(threading.Thread):
             self.connector.queue_send.put(msg)
 
     @deco.verify_message
-    def handle(self, msg):
+    def handle(self, package):
         """
         Forwards a message to the handle function of the active handler.
         Parameters
         ----------
-        msg:    str
-            The incoming message in JSON format
+        package: Package
+            The incoming package
         """
-        self.active_handler.handle(msg)
+        self.active_handler.handle(package)
 
     def send(self, message_type, payload, process=None, increment=True):
         """
@@ -121,24 +126,3 @@ class MessageHandler(threading.Thread):
         self.active_handler = VectorTimestamp(self)
         self.is_discovering = False
 
-    def create_vector(self):
-        """
-        Creates a new Vector object with the group id and process id of the Connector
-        object. Sets the counter for own messages to 0.
-
-        Returns
-        -------
-        Vector
-            A new Vector object holding information about Group ID, Process ID,
-            and own message count
-
-        """
-        id_group_own = self.communicator.category.MCAST_ADDR
-        id_process_id_own = self.communicator.connector.port
-        id_message_own = 0
-
-        index = {
-            id_process_id_own: id_message_own
-        }
-
-        return Vector(id_group_own, id_process_id_own, index)
