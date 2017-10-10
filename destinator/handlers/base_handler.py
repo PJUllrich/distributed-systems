@@ -153,6 +153,7 @@ class BaseHandler(ABC):
             self.parent.send(messages.REQUEST_NOT_FOUND, requested_msg_id, package.sender)
             return
 
+        logger.debug(f"Sent back old message {requested_msg_id} to {package.sender}")
         self.parent.send(messages.REQUEST_FOUND, old_msg, package.sender)
 
     def handle_msg_request_found(self, package):
@@ -186,7 +187,11 @@ class BaseHandler(ABC):
         vector_substitute = Vector.create_vector(self.parent.vector.group_id,
                                                  package.sender)
         package_substitute = UnpackedPackage(vector_substitute, messages.TEMPERATURE, 15)
+
         self.hold_back.append(package_substitute)
+
+        if self.parent.vector.index.get(package.sender) < package.payload:
+            self.parent.vector.index.update({package.sender: package.payload})
 
     def handle_default(self, package):
         """
