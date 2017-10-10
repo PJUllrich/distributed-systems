@@ -9,7 +9,6 @@ from destinator.util.logger import setup_logger
 logger = logging.getLogger(__name__)
 
 # input area
-COUNT_DEVICES = 10
 ACTIVE_THREADS = 3
 PROB_CREATE = 0.4
 PROB_CRASH = 0.2

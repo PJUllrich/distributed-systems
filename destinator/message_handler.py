@@ -1,7 +1,8 @@
 import logging
 import threading
-from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
@@ -11,6 +12,9 @@ from destinator.util.package import JsonPackage
 from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
+
+logging.getLogger('apscheduler.scheduler').propagate = False
+logging.getLogger('apscheduler.executors.default').propagate = False
 
 
 class MessageHandler(threading.Thread):
@@ -105,16 +109,18 @@ class MessageHandler(threading.Thread):
         msg = MessageFactory.pack(self.vector, message_type, payload)
         self.queue_send.put((process, msg))
 
-    def deliver(self, msg):
+    def deliver(self, package):
         """
         Wrapper function for the deliver function of the Communicator class
 
         Parameters
         ----------
-        msg:    str
-            The message to be delivered in JSON format
+        package:    JsonPackage
+            The package whose content should be delivered
         """
-        self.communicator.deliver(msg)
+        logger.debug(
+            f"{threading.get_ident()} - Delivering message: {package.vector.index}")
+        self.communicator.deliver(package.payload)
 
     def end_discovery(self):
         """
@@ -125,4 +131,3 @@ class MessageHandler(threading.Thread):
         logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
         self.is_discovering = False
-

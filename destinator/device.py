@@ -14,6 +14,8 @@ class Device(threading.Thread):
         super().__init__()
         self.cancelled = False
 
+        self.history = []
+
         self.category = category
         self.communicator = Communicator(self)
 
@@ -30,7 +32,7 @@ class Device(threading.Thread):
             self.pull()
             self.work()
 
-        logger.warning(f"{threading.get_ident()} - Device crashed)")
+        logger.error(f"{threading.get_ident()} - Device crashed)")
 
     def pull(self):
         """
@@ -43,15 +45,22 @@ class Device(threading.Thread):
             self.communicator.queue_deliver.task_done()
 
     def work(self):
-        if self.communicator.is_discovering is False:
-            if rd.random() < 0.000001:
-                self.send(rd.randint(-10, 30))
-        else:
+        if self.communicator.is_discovering:
             logger.debug(f"{threading.get_ident()} - Device is not ready to send "
                          f"information [discovery mode]")
+            return
+
+        if rd.random() < 0.0001:
+            self.send(rd.randint(1, 30))
 
     def handle_message(self, msg):
-        logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
+        self.history.append(msg)
+
+        if len(self.history) > 7:
+            avg = sum(self.history) / len(self.history)
+            logger.info(f"{threading.get_ident()} - Average of {len(self.history)} "
+                        f"messages: {avg:.2f}")
+            self.history.clear()
 
     def send(self, msg):
         self.communicator.send(self.category.NAME, msg)

@@ -1,6 +1,5 @@
 import logging
 
-from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
@@ -10,26 +9,20 @@ class VectorTimestamp(BaseHandler):
     def __init__(self, parent_handler):
         super().__init__(parent_handler)
 
-        self.hold_back = []
-
-    def default(self, vector, text):
+    def handle_default(self, package):
         """
         Overwrites the BaseHandler default function. Packs the Vector and text input
         pack into a message and forwards it to the b_discover function.
 
         Parameters
         ----------
-        vector: Vector
-            The Vector from the received message
-        text:   str
-            The text that was sent with the message
+        package: Package
+            The received package
         """
-        logger.info(f'VectorTimestamp called Default function for message: {text}')
 
-        msg = MessageFactory.pack(vector, None, text)
-        self.b_deliver(msg)
+        self.b_deliver(package)
 
-    def co_multicast(self, text):
+    def co_multicast(self, package):
         """
         Sends out a text together with the Vector object of the VectorTimestamp object.
         Before sending, the message counter for the Process sending is incremented by 1
@@ -44,9 +37,9 @@ class VectorTimestamp(BaseHandler):
             The text to be sent
         """
 
-        self.parent.send(text)
+        self.parent.send(package)
 
-    def b_deliver(self, msg):
+    def b_deliver(self, package):
         """
         Handles the ordering of messages before delivering them. This function is (
         alomost) alike to the function as described in the Lecture Slides. Only
@@ -55,21 +48,20 @@ class VectorTimestamp(BaseHandler):
 
         Parameters
         ----------
-        msg:    str
-            The message in JSON format
+        package:    Package
+            The package received
         """
-        vector, _, _ = MessageFactory.unpack(msg)
-        if self.is_old(vector):
+        if self.is_old(package.vector):
             return
 
-        self.hold_back.append([vector, msg])
+        self.hold_back.append(package)
 
         deliverables = self.get_deliverables()
-        for v, m in deliverables:
-            self.co_deliver(m)
-            self.increment(v)
+        for package in deliverables:
+            self.co_deliver(package)
+            self.increment(package.vector)
 
-    def co_deliver(self, msg):
+    def co_deliver(self, package):
         """
         Delivers a message to the Connector's Queue shared with a Device object
 
@@ -79,7 +71,7 @@ class VectorTimestamp(BaseHandler):
             A String containing the message (Identifier + text) in JSON format
 
         """
-        self.parent.deliver(msg)
+        self.parent.deliver(package)
 
     def is_old(self, vector):
         """
@@ -97,10 +89,10 @@ class VectorTimestamp(BaseHandler):
         bool
             True if message was seen already, False if message is new.
         """
-        idx_j = vector.index.get(vector.process_id)
-        idx_i = self.parent.vector.index.get(vector.process_id, 0)
+        idx_new = vector.index.get(vector.process_id)
+        idx_old = self.parent.vector.index.get(vector.process_id, 0)
 
-        return idx_j <= idx_i
+        return idx_new <= idx_old
 
     def get_deliverables(self):
         """
@@ -109,8 +101,8 @@ class VectorTimestamp(BaseHandler):
 
         Returns
         -------
-        [(Vector, str)]
-            An array with the Vector, Message pairs that are causally following the
+        [Package]
+            An array with the packages that are causally following the
             previously seen messages. The Ordering in which the messages should be
             delivered is preserved in this array.
         """
@@ -118,12 +110,12 @@ class VectorTimestamp(BaseHandler):
         more = True
 
         while more:
-            self.hold_back = [(v, m) for v, m in self.hold_back if (v, m) not in out]
+            self.hold_back = [p for p in self.hold_back if p not in out]
             more = False
 
-            for vector, msg in reversed(self.hold_back):
-                if self.is_causal(vector):
-                    out.append((vector, msg))
+            for package in reversed(self.hold_back):
+                if self.is_causal(package.vector):
+                    out.append(package)
                     more = True
 
         return out
@@ -144,10 +136,10 @@ class VectorTimestamp(BaseHandler):
             Whether the Vector causally follows previously seen messages or not.
 
         """
-        v_j = vector.index.get(vector.process_id)
-        v_i = self.parent.vector.index.get(vector.process_id, 0)
+        v_new = vector.index.get(vector.process_id)
+        v_old = self.parent.vector.index.get(vector.process_id, 0)
 
-        if not v_j == v_i + 1:
+        if not v_new == v_old + 1:
             return False
 
         for k, val_jk in vector.index.items():
@@ -166,5 +158,5 @@ class VectorTimestamp(BaseHandler):
         vector: Vector
             The Vector which message counter should be incremented
         """
-        val_new = self.parent.vector.index.get(vector.process_id) + 1
+        val_new = self.parent.vector.index.get(vector.process_id, 0) + 1
         self.parent.vector.index.update({vector.process_id: val_new})

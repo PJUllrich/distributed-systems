@@ -16,6 +16,8 @@ class BaseHandler(ABC):
     def __init__(self, message_handler):
         self.parent = message_handler
 
+        self.hold_back = []
+
         self.ports_identifier = {}
 
         self.handler_bully = Bully(self.parent)
@@ -42,10 +44,10 @@ class BaseHandler(ABC):
         """
         if self.parent.leader:
             if -1 in package.vector.index:
-                logger.warning(f"Received invalid vector {package.vector.index}")
-                logger.warning(f"My vector is {self.parent.vector.index}")
+                logger.warning((f"Received invalid vector {package.vector.index} "
+                                f"My vector is {self.parent.vector.index}"))
 
-        handle_function = self.handlers.get(package.message_type, self.handle_unknown)
+        handle_function = self.handlers.get(package.message_type, self.handle_default)
         handle_function(package)
 
     def handle_discovery_msg(self, package):
@@ -124,7 +126,7 @@ class BaseHandler(ABC):
                     f"Process received DISCOVERY_RESPONSE and added Process: "
                     f"{package.vector.process_id}. New index: {self.parent.vector.index}")
 
-    def handle_unknown(self, package):
+    def handle_default(self, package):
         """
         The default function to handle incoming messages. At the moment, only logs the
         reception of the message.
@@ -134,6 +136,9 @@ class BaseHandler(ABC):
         package: JsonPackage
             The incoming package
         """
-        logger.warning(f"Received a message {package.message_type} with payload "
-                       f"{package.payload} for which no handler exists")
-        self.parent.vector.index.update(package.vector.index)
+        logger.debug(f"Received a message {package.message_type} with payload "
+                     f"{package.payload} for which no handler exists")
+
+        if package.message_type == messages.TEMPERATURE:
+            self.hold_back.append(package)
+            self.parent.vector.index.update(package.vector.index)

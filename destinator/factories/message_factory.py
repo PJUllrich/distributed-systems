@@ -18,10 +18,10 @@ class MessageFactory:
         vector: Vector
             A Vector object containing identifying information about a VectorTimestamp
             object.
+        message_type: str or None
+            The group of message
         payload: str
             A String that will be packed together with the Vector data
-        message_type: str
-            The group of message
 
         Returns
         -------
@@ -53,6 +53,8 @@ class MessageFactory:
         Vector
             A Vector object containing identifying information about the Sender of the
             JSON data input.
+        str
+            The type of the message
         str
             The text that was sent together with the Vector data.
         """

@@ -12,7 +12,7 @@ class Bully:
     It basically works in 3 phases:
      - Call for a new election
      - Voting on elections
-     - Annouce leadership (coordinate)
+     - Announce leadership (coordinate)
      To be able to check if processes have not responded to messages (within a
      timeout), task scheduling is used
     """
@@ -63,8 +63,8 @@ class Bully:
             logger.debug(f"P {self.process_id}: Process ID is not yet set")
             return
         if self.parent.leader:
-            logger.debug(f"P {self.process_id}: I am the leader at the moment, no need "
-                         f"to call an election")
+            logger.info(f"P {self.process_id}: I am the leader at the moment, no need "
+                        f"to call an election")
             return
 
         logger.info(f"P {self.process_id}: Calling for election")
@@ -100,6 +100,7 @@ class Bully:
     def handle_election(self, package):
         """
         Handle an election message
+
         Parameters
         ----------
         package: Package
@@ -122,6 +123,7 @@ class Bully:
     def handle_vote(self, package):
         """
         Handle a vote message
+
         Parameters
         ----------
         package: Package
@@ -165,6 +167,7 @@ class Bully:
     def handle_coordinate(self, package):
         """
         Handle a coordinate message
+
         Parameters
         ----------
         package: Package
@@ -185,14 +188,14 @@ class Bully:
         self.last_coordinator_msg = time.time()
 
         if package.vector.process_id < self.process_id:
-            logger.warn(
+            logger.warning(
                 f"P {self.process_id}: Received {messages.COORDINATOR} message from "
                 f"lower process id {package.vector.process_id}")
             self.call_for_election()
             return
 
-        logger.info(f"P {self.process_id}: received coordinate message from "
-                    f"{package.vector.process_id}. Am I a leader? {is_leader}")
+        logger.debug(f"P {self.process_id}: received coordinate message from "
+                     f"{package.vector.process_id}. Am I a leader? {is_leader}")
 
         # Start elections again in the future
         self.resume_job(self.job_call, self.CALL_TIMEOUT)
@@ -201,6 +204,7 @@ class Bully:
     def process_id(self):
         """
         Gets the own process id
+
         Returns
         -------
         int
@@ -214,6 +218,8 @@ class Bully:
         ----------
         job: Job
             The job to resume
+        interval: int
+            An interval in seconds
         """
         job.reschedule('interval', minutes=interval / 60)
         job.resume()

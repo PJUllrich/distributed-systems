@@ -5,6 +5,9 @@ class Package:
     def __init__(self, content):
         self.content = content
 
+    def __eq__(self, other):
+        return other.content == self.content
+
 
 class ReceivedPackage(Package):
     def __init__(self, content, sender):
