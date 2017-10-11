@@ -21,7 +21,8 @@ class Connector(threading.Thread):
         self.sock_individual = None
 
         self._connect()
-        self.listener_multicast = Listener(self.sock_multicast, self.queue_receive)
+        self.listener_multicast = Listener(self.sock_multicast, self.queue_receive,
+                                           "mcast")
         self.listener_individual = None
 
     def _connect(self):
@@ -37,7 +38,8 @@ class Connector(threading.Thread):
 
         self.port = port
         self.sock_individual = self._create_socket(self.port)
-        self.listener_individual = Listener(self.sock_individual, self.queue_receive)
+        self.listener_individual = Listener(self.sock_individual, self.queue_receive,
+                                            self.port)
         self.listener_individual.start()
 
     def _create_socket(self, port):

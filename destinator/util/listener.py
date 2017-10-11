@@ -9,13 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 class Listener(threading.Thread):
-    def __init__(self, sock, queue):
+    def __init__(self, sock, queue, identifier):
         super().__init__()
         self.daemon = True
         self.cancelled = False
 
         self.sock = sock
         self.queue = queue
+        self.identifier = identifier
 
     def run(self):
         """
@@ -28,7 +29,7 @@ class Listener(threading.Thread):
                      f"Socket {self.sock}: Listener is now receiving.")
         while not self.cancelled:
             message, address = self.sock.recvfrom(MESSAGE_SIZE)
-            logger.debug(f"Thread {threading.get_ident()}: Received from {address} "
-                     f"{message}")
+            logger.debug(f"Thread {threading.get_ident()}: Received from {address[1]} "
+                         f"at {self.identifier}: {message}")
             package = ReceivedPackage(message, address)
             self.queue.put(package)
