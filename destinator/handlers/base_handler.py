@@ -93,8 +93,7 @@ class BaseHandler(ABC):
                                                   list(used_ports)[-1] + 1)
         self.ports_identifier[package.payload] = assigned_port
 
-        self.parent.vector.index[assigned_port] = \
-            self.parent.vector.index.get(my_port)
+        self.parent.vector.index[assigned_port] = 0
 
         logger.debug(f"Got discover message from {package.payload}. "
                      f"My port {my_port}. "
