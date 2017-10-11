@@ -39,7 +39,6 @@ if __name__ == '__main__':
     time.sleep(6)
 
     while True:
-        continue
         if len(devices) is not 0 and random.random() < PROB_CRASH:
             kill_device()
         if random.random() < PROB_CREATE:

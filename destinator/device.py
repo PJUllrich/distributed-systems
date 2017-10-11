@@ -50,7 +50,7 @@ class Device(threading.Thread):
                          f"information [discovery mode]")
             return
 
-        if rd.random() < 0.0001:
+        if rd.random() < 0.00001:
             self.send(rd.randint(1, 30))
 
     def handle_message(self, msg):

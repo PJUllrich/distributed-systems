@@ -5,9 +5,9 @@ from abc import ABC
 
 import destinator.const.messages as messages
 from destinator.handlers.bully import Bully
+from destinator.handlers.phase_king import PhaseKing
 from destinator.util.package import UnpackedPackage
 from destinator.util.vector import Vector
-from destinator.handlers.phase_king import PhaseKing
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ class BaseHandler(ABC):
             messages.VT_NOT_FOUND: self.handle_msg_request_not_found,
 
             messages.PHASE_KING_INIT: self.handler_phase_king.handle_init,
+            messages.PHASE_KING_FOUND: self.handler_phase_king.handle_found,
             messages.PHASE_KING_SEND: self.handler_phase_king.handle_send,
             messages.PHASE_KING_DECISION: self.handler_phase_king.handle_decision,
         }

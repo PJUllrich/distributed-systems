@@ -1,8 +1,7 @@
 import logging
 import threading
-from queue import Queue
-
 from apscheduler.schedulers.background import BackgroundScheduler
+from queue import Queue
 
 import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
@@ -145,7 +144,7 @@ class MessageHandler(threading.Thread):
 
         if self.is_discovering is False:
             # Start the Phase King algorithm
-            if self._leader:
+            if self.is_leader:
                 self.active_handler.handler_phase_king.start()
             else:
                 self.active_handler.handler_phase_king.stop()
