@@ -94,7 +94,7 @@ class Bully:
             return
 
         logger.info(f"P {self.process_id}: ANNOUNCING LEADERSHIP")
-        self.parent.leader = True
+        self.parent.set_leader(True)
         self.parent.send(messages.COORDINATOR, None)
 
     def handle_election(self, package):
