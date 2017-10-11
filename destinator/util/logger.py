@@ -16,9 +16,8 @@ def setup_logger(filename):
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.DEBUG)
 
-    mac_addr = hex(uuid.getnode()).replace('0x', '')
     formatter = logging.Formatter(
-        f'%(asctime)s - %(levelname)7s - {mac_addr} - %(name)s: %(message)s')
+        f'%(asctime)s - %(levelname)7s - %(name)s: %(message)s')
 
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)

@@ -5,6 +5,9 @@ class Package:
     def __init__(self, content):
         self.content = content
 
+    def __eq__(self, other):
+        return other.content == self.content
+
 
 class ReceivedPackage(Package):
     def __init__(self, content, sender):
@@ -22,6 +25,13 @@ class JsonPackage(ReceivedPackage):
         super().__init__(package, package.sender)
 
         vector, message_type, payload = MessageFactory.unpack(package.content)
+        self.vector = vector
+        self.message_type = message_type
+        self.payload = payload
+
+
+class UnpackedPackage:
+    def __init__(self, vector, message_type, payload):
         self.vector = vector
         self.message_type = message_type
         self.payload = payload

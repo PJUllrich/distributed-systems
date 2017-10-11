@@ -1,5 +1,6 @@
 import destinator.const.messages as messages
 
+
 class Category:
     NAME = None
     MCAST_ADDR = None

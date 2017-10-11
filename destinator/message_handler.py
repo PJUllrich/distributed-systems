@@ -1,16 +1,20 @@
 import logging
 import threading
-from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
 from destinator.handlers.discovery import Discovery
 from destinator.handlers.vector_timestamp import VectorTimestamp
-from destinator.util.package import JsonPackage
+from destinator.util.package import JsonPackage, UnpackedPackage
 from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
+
+logging.getLogger('apscheduler.scheduler').propagate = False
+logging.getLogger('apscheduler.executors.default').propagate = False
 
 
 class MessageHandler(threading.Thread):
@@ -23,6 +27,7 @@ class MessageHandler(threading.Thread):
         self.connector = connector
 
         self.queue_send = Queue()
+        self.history_send = []
 
         self.scheduler = BackgroundScheduler()
         self.scheduler.start()
@@ -81,7 +86,7 @@ class MessageHandler(threading.Thread):
         """
         self.active_handler.handle(package)
 
-    def send(self, message_type, payload, process=None, increment=True):
+    def send(self, message_type, payload, process=None, increment=False):
         """
         Puts a message into the sending Queue. Increments the message counter by 1
         if not otherwise specified (counter should not be incremented during discovery).
@@ -102,19 +107,24 @@ class MessageHandler(threading.Thread):
         if increment:
             self.vector.index[self.vector.process_id] += 1
 
-        msg = MessageFactory.pack(self.vector, message_type, payload)
-        self.queue_send.put((process, msg))
+        package_send = MessageFactory.pack(self.vector, message_type, payload)
+        package_save = UnpackedPackage(self.vector, message_type, payload)
 
-    def deliver(self, msg):
+        self.queue_send.put((process, package_send))
+        self.add_to_history(package_save)
+
+    def deliver(self, package):
         """
         Wrapper function for the deliver function of the Communicator class
 
         Parameters
         ----------
-        msg:    str
-            The message to be delivered in JSON format
+        package:    JsonPackage
+            The package whose content should be delivered
         """
-        self.communicator.deliver(msg)
+        logger.debug(
+            f"{threading.get_ident()} - Delivering message: {package.vector.index}")
+        self.communicator.deliver(package.payload)
 
     def end_discovery(self):
         """
@@ -126,3 +136,38 @@ class MessageHandler(threading.Thread):
         self.active_handler = VectorTimestamp(self)
         self.is_discovering = False
 
+    def get_old_message(self, msg_id):
+        """
+        Retrieves an old package from the send history with a certain message id.
+        The message id equals the count of messages with the own process id.
+
+        Parameters
+        ----------
+        msg_id: int
+            The id of the message that should be retrieved
+
+        Returns
+        -------
+        UnpackedPackage or None
+        """
+
+        own_id = self.vector.process_id
+        backlog = [p for p in self.history_send if p.vector.index.get(own_id) == msg_id]
+        if len(backlog) == 0:
+            return None
+
+        return backlog[-1]
+
+    def add_to_history(self, package):
+        """
+        Appends a package to the history of packages sent.
+        If the history becomes too big, the history array is halved.
+
+        Parameters
+        ----------
+        package: UnpackedPackage
+        """
+        if len(self.history_send) > 10000:
+            self.history_send = self.history_send[5000:]
+
+        self.history_send.append(package)

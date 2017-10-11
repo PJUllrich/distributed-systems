@@ -51,7 +51,7 @@ class Communicator:
         message_type: str
             The group of the message
         """
-        self.message_handler.send(message_type, payload)
+        self.message_handler.send(message_type, payload, increment=True)
 
     def deliver(self, msg):
         """
