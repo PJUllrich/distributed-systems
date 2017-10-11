@@ -7,6 +7,7 @@ import destinator.const.messages as messages
 from destinator.handlers.bully import Bully
 from destinator.util.package import UnpackedPackage
 from destinator.util.vector import Vector
+from destinator.handlers.phase_king import PhaseKing
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class BaseHandler(ABC):
         self.ports_identifier = {}
 
         self.handler_bully = Bully(self.parent)
+        self.handler_phase_king = PhaseKing(self.parent)
         self.handlers = {
             messages.DISCOVERY: self.handle_discovery_msg,
             messages.DISCOVERY_RESPONSE: self.handle_discovery_msg_response,
@@ -33,7 +35,11 @@ class BaseHandler(ABC):
 
             messages.VT_REQUEST: self.handle_msg_request,
             messages.VT_FOUND: self.handle_msg_request_found,
-            messages.VT_NOT_FOUND: self.handle_msg_request_not_found
+            messages.VT_NOT_FOUND: self.handle_msg_request_not_found,
+
+            messages.PHASE_KING_INIT: self.handler_phase_king.handle_init,
+            messages.PHASE_KING_SEND: self.handler_phase_king.handle_send,
+            messages.PHASE_KING_DECISION: self.handler_phase_king.handle_decision,
         }
 
     def handle(self, package):
@@ -48,7 +54,7 @@ class BaseHandler(ABC):
         package: JsonPackage
             The incoming package
         """
-        if self.parent.leader:
+        if self.parent.is_leader:
             if -1 in package.vector.index:
                 logger.warning((f"Received invalid vector {package.vector.index} "
                                 f"My vector is {self.parent.vector.index}"))
@@ -74,7 +80,7 @@ class BaseHandler(ABC):
                            f'message text {package.message_type}')
             return
 
-        if not self.parent.leader:
+        if not self.parent.is_leader:
             logger.debug("Received DISCOVERY message, but ignoring it [i am not a "
                          "leader]")
             return

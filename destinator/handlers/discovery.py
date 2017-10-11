@@ -36,7 +36,7 @@ class Discovery(BaseHandler):
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
-        if self.parent.leader:
+        if self.parent.is_leader:
             self.end_discovery()
             return
 

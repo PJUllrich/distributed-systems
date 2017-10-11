@@ -32,7 +32,7 @@ class MessageHandler(threading.Thread):
         self.scheduler = BackgroundScheduler()
         self.scheduler.start()
 
-        self.leader = False
+        self._leader = False
         self.active_handler = None
         self.vector = None
 
@@ -135,6 +135,24 @@ class MessageHandler(threading.Thread):
         logger.info(f"Thread {threading.get_ident()}: Discovery Mode ended.")
         self.active_handler = VectorTimestamp(self)
         self.is_discovering = False
+
+        # Start Phase King algorithm
+        self.set_leader(self.is_leader)
+
+    def set_leader(self, is_leader):
+        logger.info(f"Am I a leader? {is_leader}")
+        self._leader = is_leader
+
+        if self.is_discovering is False:
+            # Start the Phase King algorithm
+            if self._leader:
+                self.active_handler.handler_phase_king.start()
+            else:
+                self.active_handler.handler_phase_king.stop()
+
+    @property
+    def is_leader(self):
+        return self._leader
 
     def get_old_message(self, msg_id):
         """

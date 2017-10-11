@@ -29,7 +29,7 @@ def verify_message(func):
             return
 
         # Ignore DISCOVERY messages if not the leader
-        if package.message_type == messages.DISCOVERY and not obj.leader:
+        if package.message_type == messages.DISCOVERY and not obj._leader:
             return
 
         return func(obj, package)
