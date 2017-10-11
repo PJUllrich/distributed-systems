@@ -15,6 +15,8 @@ class PhaseKing:
 
     Currently, the leader acts always byzantine. It is assumed that the leader does not
     change during one execution
+    1. Phase discovery of all active devices
+    2. Starting of the round based majority voting
     """
     PHASE_KING_INIT_JOB_ID = "PHASE_KING_JOB_INIT"
     INIT_SCHEDULE = 30
@@ -69,6 +71,9 @@ class PhaseKing:
         self.job_start.pause()
 
     def init_new_round(self):
+        """
+        Leader initiates the algorithms and pings everyone
+        """
         if not self.parent.is_leader:
             logger.warning(f"P {self._process_id}: Called, although I am not a leader")
             return
@@ -82,6 +87,9 @@ class PhaseKing:
         self.resume_job(self.job_start, self.START_TIMEOUT)
 
     def handle_init(self, package):
+        """
+        Devices is active and responds to ping
+        """
         if not package.message_type == messages.PHASE_KING_INIT:
             logger.debug(f"Received message, but wrong handler {package.message_type}")
             return
@@ -103,6 +111,9 @@ class PhaseKing:
         self.received = [self._value]
 
     def handle_found(self, package):
+        """
+        Got message from other active device
+        """
         if not package.message_type == messages.PHASE_KING_FOUND:
             logger.debug(f"Received message, but wrong handler {package.message_type}")
             return
@@ -114,6 +125,9 @@ class PhaseKing:
         self.received.append(package.payload)
 
     def start_first_round(self):
+        """
+        Start first round of Phase King, if I am the lowest process of all participants
+        """
         self.job_start.pause()
 
         if len(self.participants) < 5:
@@ -128,6 +142,10 @@ class PhaseKing:
             self.execute_decision(self.received, 0)
 
     def handle_send(self, package):
+        """
+        I am the King process this round and received messages from the other processes
+        After getting all messages, a decision needs to be made
+        """
         if not package.message_type == messages.PHASE_KING_SEND:
             logger.debug(f"Received message, but wrong handler {package.message_type}")
             return
@@ -141,6 +159,9 @@ class PhaseKing:
             self.execute_decision(self.received, round)
 
     def execute_decision(self, received_values, current_round):
+        """
+        Make a decision on majority and inform everyone
+        """
         majority = self._get_majority(received_values)
 
         payload = self._pack_payload(current_round, majority)
@@ -151,6 +172,9 @@ class PhaseKing:
             self.handle_decision_msg(current_round, majority)
 
     def handle_decision(self, package):
+        """
+        Got a decision message, handle it
+        """
         if not package.message_type == messages.PHASE_KING_DECISION:
             logger.debug(f"Received message, but wrong handler {package.message_type}")
             return
@@ -163,6 +187,10 @@ class PhaseKing:
         self.handle_decision_msg(round, majority)
 
     def handle_decision_msg(self, round, majority):
+        """
+        Got a decision, save it
+        Start the next round, if not done
+        """
         self.majorities.append(majority)
 
         if len(self.majorities) > len(self.participants) / 4 + 1:
@@ -186,6 +214,16 @@ class PhaseKing:
 
     @classmethod
     def _get_majority(cls, items):
+        """
+        Get the most frequent item of a list
+        Parameters
+        ----------
+        items: list of items
+
+        Returns
+        -------
+        The most frequent item
+        """
         count = Counter(items)
         majority_item = count.most_common(1)[0]
         majority = majority_item[0]
@@ -208,10 +246,16 @@ class PhaseKing:
 
     @property
     def _is_byzantine(self):
+        """
+        Only the leader process is byzantine
+        """
         return self.parent.is_leader
 
     @property
     def _value(self):
+        """
+        The decided on value to gain a majority on
+        """
         if self._is_byzantine:
             return self.VALUE_BYZANTINE
         return self.VALUE_CORRECT
