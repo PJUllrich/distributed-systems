@@ -114,7 +114,7 @@ class VectorTimestamp(BaseHandler):
             self.hold_back = [p for p in self.hold_back if p not in out]
             more = False
 
-            for package in reversed(self.hold_back):
+            for package in self.hold_back:
                 if self.is_causal(package.vector):
                     out.append(package)
                     more = True
@@ -178,5 +178,6 @@ class VectorTimestamp(BaseHandler):
 
         for msg_id in range(id_own + 1, id_new):
             logger.debug(f"Requested {id_new - id_own + 1} messages from process: "
-                         f"{process_id}")
+                         f"{process_id}. Got {id_own} messages, but looking for "
+                         f"no {msg_id}.")
             self.parent.send(messages.VT_REQUEST, msg_id, process_id)
