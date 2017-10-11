@@ -31,9 +31,9 @@ class BaseHandler(ABC):
             messages.VOTE: self.handler_bully.handle_vote,
             messages.COORDINATOR: self.handler_bully.handle_coordinate,
 
-            messages.REQUEST_MESSAGE: self.handle_msg_request,
-            messages.REQUEST_FOUND: self.handle_msg_request_found,
-            messages.REQUEST_NOT_FOUND: self.handle_msg_request_not_found
+            messages.VT_REQUEST: self.handle_msg_request,
+            messages.VT_FOUND: self.handle_msg_request_found,
+            messages.VT_NOT_FOUND: self.handle_msg_request_not_found
         }
 
     def handle(self, package):
@@ -150,11 +150,11 @@ class BaseHandler(ABC):
 
         if old_msg is None:
             logger.debug(f"Could not find message {requested_msg_id} in history")
-            self.parent.send(messages.REQUEST_NOT_FOUND, requested_msg_id, package.sender)
+            self.parent.send(messages.VT_NOT_FOUND, requested_msg_id, package.sender)
             return
 
         logger.debug(f"Sent back old message {requested_msg_id} to {package.sender}")
-        self.parent.send(messages.REQUEST_FOUND, old_msg, package.sender)
+        self.parent.send(messages.VT_FOUND, old_msg, package.sender)
 
     def handle_msg_request_found(self, package):
         """

@@ -179,4 +179,4 @@ class VectorTimestamp(BaseHandler):
         for msg_id in range(id_own + 1, id_new):
             logger.debug(f"Requested {id_new - id_own + 1} messages from process: "
                          f"{process_id}")
-            self.parent.send(messages.REQUEST_MESSAGE, msg_id, process_id)
+            self.parent.send(messages.VT_REQUEST, msg_id, process_id)
