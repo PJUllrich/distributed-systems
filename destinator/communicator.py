@@ -27,7 +27,9 @@ class Communicator:
         Call only once at startup to assign the first leader
         """
         self.message_handler.set_leader(is_leader)
-        self.connector.port = self.category.STARTING_PORT
+
+        if is_leader:
+            self.connector.start_individual_listener(self.category.STARTING_PORT)
 
     @property
     def is_discovering(self):
