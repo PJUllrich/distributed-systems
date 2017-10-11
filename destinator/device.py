@@ -1,4 +1,5 @@
 import logging
+import random as rd
 import threading
 
 from destinator.communicator import Communicator
@@ -12,6 +13,8 @@ class Device(threading.Thread):
     def __init__(self, category):
         super().__init__()
         self.cancelled = False
+
+        self.history = []
 
         self.category = category
         self.communicator = Communicator(self)
@@ -27,6 +30,9 @@ class Device(threading.Thread):
 
         while not self.cancelled:
             self.pull()
+            self.work()
+
+        logger.error(f"{threading.get_ident()} - Device crashed)")
 
     def pull(self):
         """
@@ -38,8 +44,26 @@ class Device(threading.Thread):
             self.handle_message(msg)
             self.communicator.queue_deliver.task_done()
 
+    def work(self):
+        if self.communicator.is_discovering:
+            logger.debug(f"{threading.get_ident()} - Device is not ready to send "
+                         f"information [discovery mode]")
+            return
+
+        if rd.random() < 0.0001:
+            self.send(rd.randint(1, 30))
+
     def handle_message(self, msg):
-        logger.info(f"{threading.get_ident()} - Device received a message: {msg}")
+        self.history.append(msg)
+
+        if len(self.history) > 4:
+            avg = sum(self.history) / len(self.history)
+            logger.info(f"{threading.get_ident()} - Average of {len(self.history)} "
+                        f"messages: {avg:.2f}")
+            self.history.clear()
 
     def send(self, msg):
-        self.communicator.send(msg)
+        self.communicator.send(self.category.NAME, msg)
+
+    def set_leader(self, is_leader):
+        self.communicator.set_leader(is_leader)

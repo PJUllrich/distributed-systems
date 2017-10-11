@@ -1,3 +1,6 @@
+import destinator.const.messages as messages
+
+
 class Category:
     NAME = None
     MCAST_ADDR = None
@@ -5,6 +8,7 @@ class Category:
 
 
 class Temperature(Category):
-    NAME = 'TEMP'
+    NAME = messages.TEMPERATURE
     MCAST_ADDR = '224.1.1.1'
-    MCAST_PORT = 6001
+    MCAST_PORT = 6000
+    STARTING_PORT = 6001

@@ -1,6 +1,8 @@
 import logging
 import threading
 
+from destinator.util.package import ReceivedPackage
+
 MESSAGE_SIZE = 1024
 
 logger = logging.getLogger(__name__)
@@ -25,5 +27,8 @@ class Listener(threading.Thread):
         logger.debug(f"Thread {threading.get_ident()}: "
                      f"Socket {self.sock}: Listener is now receiving.")
         while not self.cancelled:
-            message = self.sock.recv(MESSAGE_SIZE)
-            self.queue.put(message)
+            message, address = self.sock.recvfrom(MESSAGE_SIZE)
+            logger.debug(f"Thread {threading.get_ident()}: Received from {address} "
+                     f"{message}")
+            package = ReceivedPackage(message, address)
+            self.queue.put(package)

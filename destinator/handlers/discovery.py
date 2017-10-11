@@ -1,125 +1,94 @@
+import json
 import logging
-import threading
-import time
 
 import destinator.const.messages as messages
-from destinator.factories.message_factory import MessageFactory
+import destinator.util.util as util
 from destinator.handlers.base_handler import BaseHandler
 
 logger = logging.getLogger(__name__)
 
-# Time (in seconds) a process will wait until stopping to discover new Processes
-DISCOVERY_TIMEOUT = 5
-
 
 class Discovery(BaseHandler):
+    JOB_ID = 'DISCOVERY_JOB'
+    JOB_TIMEOUT = 15
+
     def __init__(self, parent_handler):
         super().__init__(parent_handler)
+        self.identifier = util.identifier()
 
-        self.discovery_start = None
-
-        self.handlers = {
-            messages.DISCOVERY: self.discovery,
-            messages.DISCOVERY_RESPONSE: self.discovery_response
-        }
+        self.job = self.parent.scheduler.add_job(self.send_discover_message, 'interval',
+                                                 minutes=self.JOB_TIMEOUT / 60,
+                                                 replace_existing=True, id=self.JOB_ID)
+        self.job.pause()
 
     def start_discovery(self):
         """
         Creates a new Vector information containing information about the
         VectorTimestamp object.
-
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
+        self.send_discover_message()
+        self.job.resume()
 
-        self.parent.send(messages.DISCOVERY, increment=False)
-        self.discovery_start = time.time()
-
-    def handle(self, msg):
+    def send_discover_message(self):
         """
-        Checks whether the DISCOVERY_TIMEOUT is reached. If yes, changes the active
-        handler in MessageHandler and passes the message back to MessageHandler.
-
-        If not timed out, unpacks the vector and text from a message and passes these
-        parameters on to the preset handler for the message text.
-
-        Parameters
-        ----------
-        msg:    str
-            Received JSON data
+        Sends out a DISCOVERY message in order to discover other active processes in the
+        multicast group.
         """
-        if self.timeout():
-            self.parent.end_discover()
-            self.parent.handle(msg)
+        if self.parent.leader:
+            self.end_discovery()
             return
 
-        vector, text = MessageFactory.unpack(msg)
-        handle_function = self.handlers.get(text, self.default)
-        handle_function(vector, text)
+        msg = self.identifier
+        self.parent.send(messages.DISCOVERY, msg)
 
-    def discovery(self, vector, text):
+    def end_discovery(self):
         """
-        Adds a Process ID to the Vector index if the index does not yet contain the
-        Process ID.
-
-        Sends a response to a DISCOVERY message containing identifying information
-        about the VectorTimestamp object.
+        Ends the discovery and calls the end_discovery function of the Root handler,
+        which switches the active handler from the Discovery to the VectorTimestamp
+        handler.
         """
-        if vector.process_id not in self.parent.vector.index:
-            self.parent.vector.index[vector.process_id] = \
-                vector.index.get(vector.process_id)
+        self.job.pause()
+        self.parent.end_discovery()
 
-            logger.info(f"Thread {threading.get_ident()}: "
-                        f"Leader added Process: {vector.process_id}."
-                        f"New index: {self.parent.vector.index}")
-
-        self.parent.send(messages.DISCOVERY_RESPONSE, increment=False)
-
-    def discovery_response(self, vector, text):
+    def handle(self, package):
         """
-        Handles a DISCOVERY_RESPONSE message. Adds any Process IDs to the own Vector
-        index and updates the message counts of the existing Process IDs.
-
+        Overwrites the handle function from the BaseHandler parent class. Calls the
+        super handle function with the message. Checks afterwards whether the received
+        message was a DISCOVERY_RESPONSE message. Ends discovery, if yes.
         Parameters
         ----------
-        vector: Vector
-            The Vector object received with the message
-        text:   str
-            The message text, should be 'DISCOVERY_RESPONSE'
+        package: JsonPackage
+            The incoming package
         """
-        self.parent.vector.index.update(vector.index)
-        logger.info(f"Thread {threading.get_ident()}: "
-                    f"Process received DISCOVERY_RESPONSE and added Process: "
-                    f"{vector.process_id}. New index: {self.parent.vector.index}")
+        super().handle(package)
 
-    def default(self, vector, text):
-        """
-        The default function to handle incoming messages. At the moment, only logs the
-        reception of the message.
+        if not package.message_type == messages.DISCOVERY_RESPONSE:
+            logger.debug("Received message, but still in discovery mode")
+            return
 
-        Parameters
-        ----------
-        vector: Vector
-            The Vector object received with the message
-        text:   str
-            The message text received with the message
-        """
-        # TODO: Figure out what the default function in Discovery mode should do.
-        logger.debug(f"MessageHandler in Discovery mode received a message other than "
-                     f"DISCOVERY or DISCOVERY_RESPONSE")
+        identifier, process_id = self.unpack_payload(package.payload)
 
-    def timeout(self):
-        """
-        Checks whether DISCOVERY_TIMEOUT is reached.
+        if not identifier == self.identifier:
+            logger.info(f"Received discovery response message, but not intent "
+                        f"for me. My identifier {self.identifier} vs {identifier}")
+            return
 
-        Returns
-        -------
-        bool
-            Whether Discovery timed out or not
-        """
-        if time.time() - self.discovery_start >= DISCOVERY_TIMEOUT:
-            logger.debug(f"Thread {threading.get_ident()}: "
-                         f"Discovery Mode timed out.")
-            return True
+        logger.info(f"Received relevant discovery response message. I am "
+                    f"process {process_id}")
+        self.parent.vector.process_id = process_id
+        # Initial port is -1, so remove it from vector
+        if -1 in self.parent.vector.index:
+            self.parent.vector.index.pop(-1)
 
-        return False
+        self.parent.connector.start_individual_listener(process_id)
+
+        self.end_discovery()
+
+    @classmethod
+    def unpack_payload(cls, payload):
+        data = json.loads(payload)
+        identifier = data.get(cls.FIELD_IDENTIFIER)
+        process_id = data.get(cls.FIELD_PROCESS)
+        return identifier, process_id

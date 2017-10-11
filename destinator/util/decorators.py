@@ -9,24 +9,29 @@ logger = logging.getLogger(__name__)
 
 def verify_message(func):
     @wraps(func)
-    def wrapper(obj, msg):
-        vector, text = MessageFactory.unpack(msg)
-
+    def wrapper(obj, package):
+        """
+        Validates a received JsonPackage
+        Parameters
+        ----------
+        package: JsonPackage
+        """
         # Ignore own messages
-        if (vector.group_id == obj.vector.group_id
-            and vector.process_id == obj.vector.process_id):
+        if (package.vector.group_id == obj.vector.group_id
+            and package.vector.process_id == obj.vector.process_id):
             return
 
         # Ignore messages coming from different groups. Log their reception.
-        if vector.group_id != obj.vector.group_id:
+        if package.vector.group_id != obj.vector.group_id:
             logger.warning(
-                f"Received message from different group {vector.group_id}, text: {text}")
+                f"Received message from different group {package.vector.group_id}, "
+                f"payload: {package.payload}")
             return
 
         # Ignore DISCOVERY messages if not the leader
-        if text == messages.DISCOVERY and not obj.leader:
+        if package.message_type == messages.DISCOVERY and not obj.leader:
             return
 
-        return func(obj, msg)
+        return func(obj, package)
 
     return wrapper
