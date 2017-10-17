@@ -19,8 +19,8 @@ class PhaseKing:
     2. Starting of the round based majority voting
     """
     PHASE_KING_INIT_JOB_ID = "PHASE_KING_JOB_INIT"
-    INIT_SCHEDULE = 30
     PHASE_KING_START_JOB_ID = "PHASE_KING_JOB_START"
+    INIT_SCHEDULE = 30
     START_TIMEOUT = 30
 
     FIELD_ROUND = "ROUND"

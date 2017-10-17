@@ -1,7 +1,9 @@
+import copy
 import logging
 import threading
-from apscheduler.schedulers.background import BackgroundScheduler
 from queue import Queue
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import destinator.util.decorators as deco
 from destinator.factories.message_factory import MessageFactory
@@ -92,10 +94,10 @@ class MessageHandler(threading.Thread):
 
         Parameters
         ----------
-        payload: str
-            The text to send in a message
         message_type: str
             The group of the message
+        payload: str
+            The text to send in a message
         process: int
             The process to send the payload to (None = all processes)
         increment: bool
@@ -107,10 +109,13 @@ class MessageHandler(threading.Thread):
             self.vector.index[self.vector.process_id] += 1
 
         package_send = MessageFactory.pack(self.vector, message_type, payload)
-        package_save = UnpackedPackage(self.vector, message_type, payload)
-
         self.queue_send.put((process, package_send))
-        self.add_to_history(package_save)
+
+        if increment:
+            package_save = UnpackedPackage(copy.deepcopy(self.vector),
+                                           message_type,
+                                           payload)
+            self.add_to_history(package_save)
 
     def deliver(self, package):
         """
@@ -122,7 +127,8 @@ class MessageHandler(threading.Thread):
             The package whose content should be delivered
         """
         logger.debug(
-            f"{threading.get_ident()} - Delivering message: {package.vector.index}")
+            f"{threading.get_ident()} - Delivered new message. "
+            f"New Vector: {self.vector.index}")
         self.communicator.deliver(package.payload)
 
     def end_discovery(self):
@@ -173,7 +179,7 @@ class MessageHandler(threading.Thread):
         if len(backlog) == 0:
             return None
 
-        return backlog[-1]
+        return backlog[0]
 
     def add_to_history(self, package):
         """
@@ -184,7 +190,4 @@ class MessageHandler(threading.Thread):
         ----------
         package: UnpackedPackage
         """
-        if len(self.history_send) > 10000:
-            self.history_send = self.history_send[5000:]
-
         self.history_send.append(package)

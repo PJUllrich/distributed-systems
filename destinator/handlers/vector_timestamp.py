@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import destinator.const.messages as messages
 from destinator.handlers.base_handler import BaseHandler
@@ -49,7 +50,7 @@ class VectorTimestamp(BaseHandler):
 
         Parameters
         ----------
-        package:    Package
+        package:    JsonPackage
             The package received
         """
         if self.is_old(package.vector):
@@ -62,14 +63,16 @@ class VectorTimestamp(BaseHandler):
             self.co_deliver(package)
             self.increment(package.vector)
 
+        self.request_missed_messages(package.vector)
+
     def co_deliver(self, package):
         """
         Delivers a message to the Connector's Queue shared with a Device object
 
         Parameters
         ----------
-        msg:    str
-            A String containing the message (Identifier + text) in JSON format
+        package:    JsonPackage
+            Package containing the message (Identifier + text) in JSON format
 
         """
         self.parent.deliver(package)
@@ -90,10 +93,9 @@ class VectorTimestamp(BaseHandler):
         bool
             True if message was seen already, False if message is new.
         """
-        idx_new = vector.index.get(vector.process_id)
-        idx_old = self.parent.vector.index.get(vector.process_id, 0)
+        idx_new, idx_own = self.get_vector_indices(vector)
 
-        return idx_new <= idx_old
+        return idx_new <= idx_own
 
     def get_deliverables(self):
         """
@@ -137,11 +139,9 @@ class VectorTimestamp(BaseHandler):
             Whether the Vector causally follows previously seen messages or not.
 
         """
-        v_new = vector.index.get(vector.process_id)
-        v_old = self.parent.vector.index.get(vector.process_id, 0)
+        idx_new, idx_own = self.get_vector_indices(vector)
 
-        if not v_new == v_old + 1:
-            self.request_missed_messages(v_old, v_new, vector.process_id)
+        if not idx_new == idx_own + 1:
             return False
 
         for k, val_jk in vector.index.items():
@@ -163,21 +163,25 @@ class VectorTimestamp(BaseHandler):
         val_new = self.parent.vector.index.get(vector.process_id, 0) + 1
         self.parent.vector.index.update({vector.process_id: val_new})
 
-    def request_missed_messages(self, id_own, id_new, process_id):
+    def request_missed_messages(self, vector):
         """
 
         Parameters
         ----------
-        id_own: int
-            The message count of the process_id in the own Vector.index
-        id_new: int
-            The message count of the process_id received from that process
-        process_id: int
+        vector: Vector
             The process id of the process from which the messages shall be requested
         """
 
+        id_new, id_own = self.get_vector_indices(vector)
+
         for msg_id in range(id_own + 1, id_new):
-            logger.debug(f"Requested {id_new - id_own + 1} messages from process: "
-                         f"{process_id}. Got {id_own} messages, but looking for "
-                         f"no {msg_id}.")
-            self.parent.send(messages.VT_REQUEST, msg_id, process_id)
+            logger.debug(f"{threading.get_ident()} - Requested message no. {msg_id} from "
+                         f"process: {vector.process_id}. Got message no. {id_own}, but "
+                         f"newest is {id_new}.")
+            self.parent.send(messages.VT_REQUEST, msg_id, vector.process_id)
+
+    def get_vector_indices(self, vector):
+        idx_received = vector.index.get(vector.process_id)
+        idx_own = self.parent.vector.index.get(vector.process_id, 0)
+
+        return idx_received, idx_own

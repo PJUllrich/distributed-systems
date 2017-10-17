@@ -6,8 +6,6 @@ from abc import ABC
 import destinator.const.messages as messages
 from destinator.handlers.bully import Bully
 from destinator.handlers.phase_king import PhaseKing
-from destinator.util.package import UnpackedPackage
-from destinator.util.vector import Vector
 
 logger = logging.getLogger(__name__)
 
@@ -149,18 +147,19 @@ class BaseHandler(ABC):
         package: JsonPackage
         """
 
-        logger.debug(f"Received old message request from process: {package.sender} for "
-                     f"message: {package.payload}")
+        logger.debug(f"Received old message request from process: {package.sender_port} "
+                     f"for message: {package.payload}")
         requested_msg_id = int(package.payload)
         old_msg = self.parent.get_old_message(requested_msg_id)
 
         if old_msg is None:
             logger.debug(f"Could not find message {requested_msg_id} in history")
-            self.parent.send(messages.VT_NOT_FOUND, requested_msg_id, package.sender)
+            self.parent.send(messages.VT_NOT_FOUND, requested_msg_id,
+                             package.vector.process_id)
             return
 
         logger.debug(f"Sent back old message {requested_msg_id} to {package.sender}")
-        self.parent.send(messages.VT_FOUND, old_msg, package.sender)
+        self.parent.send(messages.VT_FOUND, old_msg.payload, package.vector.process_id)
 
     def handle_msg_request_found(self, package):
         """
@@ -172,8 +171,8 @@ class BaseHandler(ABC):
         package: JsonPackage
         """
 
-        logger.debug(f"Received requested message from process {package.sender}")
-        self.hold_back.append(package.payload)
+        logger.debug(f"Received requested message from process {package.sender_port}")
+        self.hold_back.append(package)
 
     def handle_msg_request_not_found(self, package):
         """
@@ -189,15 +188,11 @@ class BaseHandler(ABC):
         """
 
         logger.debug(f"Received requested message NOT found from process "
-                     f"{package.sender}. Will substitute missing message.")
-        vector_substitute = Vector.create_vector(self.parent.vector.group_id,
-                                                 package.sender)
-        package_substitute = UnpackedPackage(vector_substitute, messages.TEMPERATURE, 15)
+                     f"{package.sender_port}.")
 
-        self.hold_back.append(package_substitute)
-
-        if self.parent.vector.index.get(package.sender) < package.payload:
-            self.parent.vector.index.update({package.sender: package.payload})
+        requested_msg_id = int(package.payload)
+        if self.parent.vector.index.get(package.sender_port) < requested_msg_id:
+            self.parent.vector.index.update({package.sender_port: requested_msg_id})
 
     def handle_default(self, package):
         """
@@ -209,9 +204,8 @@ class BaseHandler(ABC):
         package: JsonPackage
             The incoming package
         """
-        if package.message_type == messages.TEMPERATURE:
-            self.hold_back.append(package)
-            self.parent.vector.index.update(package.vector.index)
-        else:
-            logger.debug(f"Handled package {package.message_type} - {package.payload} "
-                         f"with default handler")
+        # if package.message_type == messages.TEMPERATURE:
+        #     self.hold_back.append(package)
+
+        logger.debug(f"Handled package {package.message_type} - {package.payload} "
+                     f"with default handler")
