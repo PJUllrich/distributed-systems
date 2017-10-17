@@ -9,7 +9,7 @@ from destinator.util.logger import setup_logger
 logger = logging.getLogger(__name__)
 
 # input area
-ACTIVE_THREADS = 3
+ACTIVE_THREADS = 5
 PROB_CREATE = 0.4
 PROB_CRASH = 0.2
 SLEEP_TIME = 1

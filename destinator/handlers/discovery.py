@@ -36,7 +36,7 @@ class Discovery(BaseHandler):
         Sends out a DISCOVERY message in order to discover other active processes in the
         multicast group.
         """
-        if self.parent.leader:
+        if self.parent.is_leader:
             self.end_discovery()
             return
 
@@ -76,7 +76,11 @@ class Discovery(BaseHandler):
             return
 
         logger.info(f"Received relevant discovery response message. I am "
-                    f"process {process_id}")
+                    f"process {process_id}. Ident: {self.identifier}")
+
+        if self.parent.vector.process_id != -1:
+            logger.warning(f"P {self.parent.vector.process_id} getting assigned a new "
+                           f"port {process_id}")
         self.parent.vector.process_id = process_id
         # Initial port is -1, so remove it from vector
         if -1 in self.parent.vector.index:

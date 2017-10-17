@@ -62,7 +62,7 @@ class Bully:
         if self.process_id <= 0:
             logger.debug(f"P {self.process_id}: Process ID is not yet set")
             return
-        if self.parent.leader:
+        if self.parent.is_leader:
             logger.info(f"P {self.process_id}: I am the leader at the moment, no need "
                         f"to call an election")
             return
@@ -94,7 +94,7 @@ class Bully:
             return
 
         logger.info(f"P {self.process_id}: ANNOUNCING LEADERSHIP")
-        self.parent.leader = True
+        self.parent.set_leader(True)
         self.parent.send(messages.COORDINATOR, None)
 
     def handle_election(self, package):
@@ -180,7 +180,7 @@ class Bully:
             return
 
         is_leader = (self.process_id == package.vector.process_id)
-        self.parent.leader = is_leader
+        self.parent.set_leader(is_leader)
 
         self.job_call_response.pause()
         self.job_coordinator.pause()
